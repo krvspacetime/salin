@@ -1,7 +1,7 @@
 # yt-subs
 
-`yt-subs` is a small Python library for inspecting, resolving, and downloading
-YouTube subtitle tracks.
+`yt-subs` is a small Python library for inspecting, resolving, downloading, and
+cleaning YouTube subtitle tracks.
 
 ## Install
 
@@ -142,6 +142,35 @@ Measured on the same video: the shared pipeline is one extraction (~4s) plus
 rejected — yt-dlp needs the full record (`id`, `extractor`, and the subtitle
 tracks) to download anything, so a trimmed dict would fail much later. Playlist
 results are rejected too; `yt-subs` downloads single videos only.
+
+## Clean transcripts
+
+Auto-generated captions scroll by in overlapping blocks, so the raw file repeats
+itself. `clean_transcript()` parses each downloaded subtitle, strips markup and
+stage directions (`[Music]`, `(laughter)`, `>>` speaker chevrons), collapses the
+rolling overlap, and writes one `.txt` per subtitle.
+
+```python
+from yt_subs import YtSubs, clean_transcript
+
+result = YtSubs(languages="en", subtitle_format="vtt").download(url)
+paths = clean_transcript(result, output_dir="transcripts")
+```
+
+With `output_dir` omitted, each transcript is written next to its source subtitle.
+`max_workers` cleans in parallel (default `1`).
+
+To get the text without touching the filesystem, use `clean_cues()`:
+
+```python
+from yt_subs import clean_cues
+
+text = clean_cues(result.ok_subs[0].sub_path, result.ok_subs[0].format)
+```
+
+Parsing is per-format and currently covers `vtt` and `srt`. Any other format
+raises `UnsupportedFormatError`. Add one in `yt_subs/cleaner/parsers/` and
+register it in `CUE_READERS`.
 
 ## Bulk Downloads
 

@@ -12,6 +12,7 @@ from yt_subs.core.extractor import (
     inspect_subtitles,
     log_subtitle_availability,
 )
+from yt_subs.core.resolver import resolve_availability
 
 __all__ = [
     "download_subtitles",

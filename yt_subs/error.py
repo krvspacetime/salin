@@ -24,3 +24,7 @@ class ChannelUnavailableError(ExtractorError):
 
 class SubtitleDownloadError(YtSubsError):
     """Raised when downloading subtitles fails."""
+
+
+class UnsupportedFormatError(YtSubsError, NotImplementedError):
+    """Raised when a subtitle format has no parser for the requested operation."""
