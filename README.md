@@ -145,10 +145,60 @@ results are rejected too; `yt-subs` downloads single videos only.
 
 ## Clean transcripts
 
-Auto-generated captions scroll by in overlapping blocks, so the raw file repeats
-itself. `clean_transcript()` parses each downloaded subtitle, strips markup and
-stage directions (`[Music]`, `(laughter)`, `>>` speaker chevrons), collapses the
-rolling overlap, and writes one `.txt` per subtitle.
+`download()` gives you the subtitle file exactly as YouTube serves it. That file
+is a poor thing to read, index, or feed to a model, and `clean_transcript()`
+turns it into prose.
+
+### Why
+
+Auto-generated captions carry two kinds of noise. Captions are written as they
+are spoken, in short overlapping windows, so the same phrase lands on screen
+three times in a row:
+
+```
+00:48:18.950 --> 00:48:18.960 align:start position:0%
+multiple hours to capture the same level
+
+00:48:18.960 --> 00:48:20.710 align:start position:0%
+multiple hours to capture the same level
+of<00:48:19.119><c> mistake</c><00:48:19.520><c> because</c><00:48:20.000><c> it</c><00:48:20.240><c> requires</c><00:48:20.560><c> like</c>
+
+00:48:20.710 --> 00:48:20.720 align:start position:0%
+of mistake because it requires like
+```
+
+Those three cues are on screen *simultaneously* -- a scrolling window, not three
+successive statements. Read in file order, "multiple hours to capture the same
+level" and "of mistake because it requires like" each appear twice, plus the
+inline `<00:48:19.119><c>` word-timing tags are not text at all.
+
+On top of that, YouTube's caption formats are display markup rather than prose:
+
+```xml
+<p t="1360" d="1680">[♪♪♪]</p>
+<p t="18640" d="3240">♪ We&#39;re no strangers to love ♪</p>
+<p t="22640" d="4320">♪ You know the rules<br />and so do I ♪</p>
+```
+
+Cleaning does three things: strips display markup and stage directions
+(`[Music]`, `(laughter)`, `>>` speaker chevrons, music notes), merges the
+overlapping windows, and returns one paragraph.
+
+### What you get
+
+The three cues above become:
+
+```
+multiple hours to capture the same level of mistake because it requires like
+```
+
+and the `srv3` file becomes:
+
+```
+We're no strangers to love You know the rules and so do I
+```
+
+To write those out:
 
 ```python
 from yt_subs import YtSubs, clean_transcript
@@ -157,20 +207,40 @@ result = YtSubs(languages="en", subtitle_format="vtt").download(url)
 paths = clean_transcript(result, output_dir="transcripts")
 ```
 
-With `output_dir` omitted, each transcript is written next to its source subtitle.
-`max_workers` cleans in parallel (default `1`).
+With `output_dir` omitted, each transcript is written next to its source
+subtitle. `max_workers` cleans in parallel (default `1`).
 
 To get the text without touching the filesystem, use `clean_cues()`:
 
 ```python
 from yt_subs import clean_cues
 
-text = clean_cues(result.ok_subs[0].sub_path, result.ok_subs[0].format)
+subtitle = result.ok_subs[0]
+text = clean_cues(subtitle.sub_path, subtitle.format)
 ```
 
 Every `SubtitleFormat` is parsed: `vtt`, `srt`, `json3`, `srv1`, `srv2`, `srv3`,
 and `ttml`. Add another in `yt_subs/cleaner/parsers/` and register it in
 `CUE_READERS`.
+
+### VTT is approximate
+
+Six of the seven formats are exact. `vtt` is not, and the difference is small:
+on a 72-minute auto-captioned podcast the cleaned `vtt` transcript came out 41
+words longer than the same video's other six formats (15734 vs 15693, 0.3%).
+
+Auto-caption `vtt` is the only rolling format, and YouTube sometimes repeats a
+word *inside* a single cue, where the overlap merge cannot see it:
+
+```
+cue: startup world in Belgium. I did that for for a little while and then moved to
+```
+
+The cleaner cannot tell that seam artifact from a genuine stumble like `or or` or
+`it it`, both of which are real and appear in every format, so it leaves both
+alone. This only affects auto-generated captions, and only `vtt`; manually
+authored tracks are usually not rolling. If you need the exact text, prefer
+`srt`, `srv1`, `srv3`, `json3` or `ttml`.
 
 ## Bulk Downloads
 
