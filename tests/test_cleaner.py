@@ -343,9 +343,13 @@ SRV1_ALL = (
 
 SRV2_ALL = (
     '<?xml version="1.0" encoding="utf-8" ?><timedtext>'
-    '<text t="18640" d="3240">We are no strangers to love</text>'
-    '<text t="22640" d="4320">You know the rules\nand so do I</text>'
-    '<text t="27040" d="4000">A full commitment is what I am thinking of</text>'
+    '<text t="18640" d="3240" w="1" r="15" c="1">We are no strangers to love</text>'
+    '<text t="18680" d="3200" w="1" append="1"> You know the rules</text>'
+    '<text t="18690" d="3190" w="1" append="1">\n</text>'
+    '<text t="22640" d="4320" w="1" r="15" c="1">You know the rules</text>'
+    '<text t="22680" d="4280" w="1" append="1"> and so do I</text>'
+    '<text t="27040" d="4000" w="1" r="15" c="1">A full commitment is </text>'
+    '<text t="27080" d="3960" w="1" append="1">what I am thinking of</text>'
     "</timedtext>"
 )
 
@@ -475,3 +479,36 @@ def test_json3_rejects_malformed_payloads(tmp_path):
 def test_missing_file_raises_for_every_format(tmp_path, fmt):
     with pytest.raises(FileNotFoundError):
         read_cues(tmp_path / f"nope.en.{fmt}", fmt)
+
+
+def test_srv2_groups_append_elements_into_one_cue_per_line(tmp_path):
+    # srv2 is emitted word-by-word: only elements without append="1" open a
+    # caption line. Reading each element as its own cue yields single-word
+    # blocks, and deduplicating those against the running tail deletes every
+    # genuine repetition.
+    path = tmp_path / "abc.en.srv2"
+    path.write_text(SRV2_ALL, encoding="utf-8")
+
+    cues = read_cues(path, SubtitleFormat.SRV2)
+
+    assert len(cues) == 3
+    assert cues[0].text == "We are no strangers to love You know the rules"
+    assert cues[1].text == "You know the rules and so do I"
+    assert cues[2].text == "A full commitment is what I am thinking of"
+
+
+def test_srv2_keeps_repeated_words_inside_a_line(tmp_path):
+    path = tmp_path / "abc.en.srv2"
+    path.write_text(
+        '<?xml version="1.0" encoding="utf-8" ?><timedtext>'
+        '<text t="0" d="1000">the model is</text>'
+        '<text t="10" d="990" append="1"> is good</text>'
+        '<text t="2000" d="1000">of of the</text>'
+        '<text t="2010" d="990" append="1"> the</text>'
+        "</timedtext>",
+        encoding="utf-8",
+    )
+
+    text = clean_cues(path, SubtitleFormat.SRV2)
+
+    assert text == "the model is is good of of the the"

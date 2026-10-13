@@ -9,6 +9,10 @@ YouTube's own timed-text XML, in three flavours that differ in more than name:
 
 srv1 and srv2 also escape ampersands twice (``&amp;#39;``), so their text needs
 a second unescape pass after the XML parser has run.
+
+srv2 is the odd one out structurally: it is emitted word-by-word, with
+``append="1"`` marking words that continue the caption line already open. Only
+the elements *without* that flag are captions. See :func:`parse_srv2_cues`.
 """
 
 from __future__ import annotations
@@ -63,7 +67,66 @@ def parse_srv1_cues(source: str) -> list[ParsedCue]:
 
 
 def parse_srv2_cues(source: str) -> list[ParsedCue]:
-    return _build(ElementTree.fromstring(source), "text", "t", divisor=1)
+    """
+    Parse srv2, which is word-by-word rather than one element per caption.
+
+    Every element without ``append="1"`` opens a caption line; the ones that
+    follow carry ``append="1"`` and belong to that same line. On a 72-minute
+    video that is 2170 base elements against 15741 continuations -- the same
+    2170 captions srv1 and srv3 carry directly. Reading each element as its own
+    cue turns the whole transcript into single-word blocks, and deduplicating
+    single-word blocks against the running tail silently deletes every genuine
+    repetition ("of of", "the the", "and and").
+    """
+    root = ElementTree.fromstring(source)
+    cues: list[ParsedCue] = []
+
+    words: list[str] = []
+    start_ms: int | None = None
+    end_ms: int | None = None
+
+    def flush() -> None:
+        nonlocal words, start_ms, end_ms
+        text = " ".join(word for word in words if word)
+        if text and start_ms is not None:
+            cues.append(
+                ParsedCue(
+                    index=len(cues),
+                    start_ms=start_ms,
+                    end_ms=end_ms if end_ms is not None else start_ms,
+                    text=text,
+                )
+            )
+        words = []
+        start_ms = None
+        end_ms = None
+
+    for node in iter_local(root, "text"):
+        raw_t = node.get("t")
+        piece = _unescape(element_text(node))
+
+        if node.get("append") == "1":
+            if start_ms is None or raw_t is None:
+                continue
+            if piece:
+                words.append(piece)
+                end_ms = _to_ms(raw_t, divisor=1) + _to_ms(
+                    node.get("d") or "0", divisor=1
+                )
+            continue
+
+        flush()
+        if raw_t is None:
+            continue
+
+        line_start_ms = _to_ms(raw_t, divisor=1)
+        start_ms = line_start_ms
+        end_ms = line_start_ms + _to_ms(node.get("d") or "0", divisor=1)
+        if piece:
+            words.append(piece)
+
+    flush()
+    return cues
 
 
 def parse_srv3_cues(source: str) -> list[ParsedCue]:
