@@ -11,8 +11,8 @@ _SRT_TIMESTAMP_RE = re.compile(
 _SRT_SEQUENCE_RE = re.compile(r"^\d+$")
 
 
-def parse_srt_cues(lines: list[str]) -> list[ParsedCue]:
-    """Parse raw line lists into structured SRT ParsedCues."""
+def parse_srt_cues(source: str) -> list[ParsedCue]:
+    """Parse SRT source text into structured SRT ParsedCues."""
     cues: list[ParsedCue] = []
     current_lines: list[str] = []
     start_ms: int | None = None
@@ -39,7 +39,7 @@ def parse_srt_cues(lines: list[str]) -> list[ParsedCue]:
         start_ms = None
         end_ms = None
 
-    for raw in lines:
+    for raw in source.splitlines():
         line = raw.strip()
         if not line:
             flush()
@@ -68,4 +68,4 @@ def read_srt_cues(path: Path) -> list[ParsedCue]:
     if not path.exists():
         raise FileNotFoundError(path)
     with open(path, encoding="utf-8-sig") as f:
-        return parse_srt_cues(f.readlines())
+        return parse_srt_cues(f.read())

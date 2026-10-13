@@ -168,9 +168,9 @@ from yt_subs import clean_cues
 text = clean_cues(result.ok_subs[0].sub_path, result.ok_subs[0].format)
 ```
 
-Parsing is per-format and currently covers `vtt` and `srt`. Any other format
-raises `UnsupportedFormatError`. Add one in `yt_subs/cleaner/parsers/` and
-register it in `CUE_READERS`.
+Every `SubtitleFormat` is parsed: `vtt`, `srt`, `json3`, `srv1`, `srv2`, `srv3`,
+and `ttml`. Add another in `yt_subs/cleaner/parsers/` and register it in
+`CUE_READERS`.
 
 ## Bulk Downloads
 

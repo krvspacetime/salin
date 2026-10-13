@@ -12,18 +12,38 @@ from pathlib import Path
 from yt_subs.error import UnsupportedFormatError
 from yt_subs.shared.models import SubtitleFormat
 
-from .common import CueReader, LineParser, ParsedCue, timestamp_to_ms
+from .common import CueReader, ParsedCue, SourceParser, timestamp_to_ms
+from .json3 import parse_json3_cues, read_json3_cues
 from .srt import parse_srt_cues, read_srt_cues
+from .srv import (
+    parse_srv1_cues,
+    parse_srv2_cues,
+    parse_srv3_cues,
+    read_srv1_cues,
+    read_srv2_cues,
+    read_srv3_cues,
+)
+from .ttml import parse_ttml_cues, read_ttml_cues
 from .vtt import parse_vtt_cues, read_vtt_cues
 
 CUE_READERS: dict[SubtitleFormat, CueReader] = {
     SubtitleFormat.SRT: read_srt_cues,
     SubtitleFormat.VTT: read_vtt_cues,
+    SubtitleFormat.JSON3: read_json3_cues,
+    SubtitleFormat.SRV1: read_srv1_cues,
+    SubtitleFormat.SRV2: read_srv2_cues,
+    SubtitleFormat.SRV3: read_srv3_cues,
+    SubtitleFormat.TTML: read_ttml_cues,
 }
 
-LINE_PARSERS: dict[SubtitleFormat, LineParser] = {
+SOURCE_PARSERS: dict[SubtitleFormat, SourceParser] = {
     SubtitleFormat.SRT: parse_srt_cues,
     SubtitleFormat.VTT: parse_vtt_cues,
+    SubtitleFormat.JSON3: parse_json3_cues,
+    SubtitleFormat.SRV1: parse_srv1_cues,
+    SubtitleFormat.SRV2: parse_srv2_cues,
+    SubtitleFormat.SRV3: parse_srv3_cues,
+    SubtitleFormat.TTML: parse_ttml_cues,
 }
 
 SUPPORTED_FORMATS = tuple(CUE_READERS)
@@ -51,16 +71,26 @@ def read_blocks(path: Path, subtitle_format: SubtitleFormat) -> list[str]:
 
 __all__ = [
     "CUE_READERS",
-    "LINE_PARSERS",
+    "SOURCE_PARSERS",
     "SUPPORTED_FORMATS",
     "CueReader",
-    "LineParser",
+    "SourceParser",
     "ParsedCue",
+    "parse_json3_cues",
     "parse_srt_cues",
+    "parse_srv1_cues",
+    "parse_srv2_cues",
+    "parse_srv3_cues",
+    "parse_ttml_cues",
     "parse_vtt_cues",
     "read_blocks",
     "read_cues",
+    "read_json3_cues",
     "read_srt_cues",
+    "read_srv1_cues",
+    "read_srv2_cues",
+    "read_srv3_cues",
+    "read_ttml_cues",
     "read_vtt_cues",
     "reader_for",
     "timestamp_to_ms",

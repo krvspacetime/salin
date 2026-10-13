@@ -18,8 +18,8 @@ def _to_ms(hours: str | None, minutes: str, seconds: str, millis: str) -> int:
     return total_ms + (int(hours) * 3_600_000 if hours else 0)
 
 
-def parse_vtt_cues(lines: list[str]) -> list[ParsedCue]:
-    """Parse raw line lists into structured VTT ParsedCues."""
+def parse_vtt_cues(source: str) -> list[ParsedCue]:
+    """Parse VTT source text into structured VTT ParsedCues."""
     cues: list[ParsedCue] = []
     current_lines: list[str] = []
     start_ms: int | None = None
@@ -46,7 +46,7 @@ def parse_vtt_cues(lines: list[str]) -> list[ParsedCue]:
         start_ms = None
         end_ms = None
 
-    for raw in lines:
+    for raw in source.splitlines():
         line = raw.strip()
         if not line or any(line.startswith(p) for p in _VTT_SKIP_PREFIXES):
             continue
@@ -69,4 +69,4 @@ def read_vtt_cues(path: Path) -> list[ParsedCue]:
     if not path.exists():
         raise FileNotFoundError(path)
     with open(path, encoding="utf-8-sig") as f:
-        return parse_vtt_cues(f.readlines())
+        return parse_vtt_cues(f.read())
