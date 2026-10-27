@@ -394,10 +394,12 @@ than raising it.
 ## Benchmarks
 
 One residential IP, Windows, `yt-dlp 2026.07.04`, `youtube-transcript-api 1.2.4`,
-`yt-subs 0.1.0`, 2026-10-27. 480 videos from a Postgres table where
-`captions_available = true`, shuffled with a fixed seed; `en` only, sequential,
-no artificial delay. Times are local, and the machine was in normal use, so
-sub-second differences are noise. Block onset and success/failure are reliable.
+`yt-subs 0.1.0`, 2026-10-27/28, `en` only, sequential, no artificial delay. Two
+samples from the same Postgres table: 480 videos where `captions_available =
+true`, and 1,000 videos sampled uniformly from all 9,776 rows. Both were
+shuffled with a fixed seed. Times are local and the machine was in normal use,
+so sub-second differences are noise; block onset and success/failure are
+reliable.
 
 ### How fast each library gets blocked
 
@@ -414,7 +416,8 @@ requests.
 
 SubtitleKit then ran 479 of 480 in one continuous 31.9-minute session with
 **zero blocks**; the one failure was a genuinely unavailable video, so its
-success rate on usable videos is 100%.
+success rate on usable videos is 100%. A further 1,000-video random sample ran
+88 more minutes on the same IP, also with zero blocks (see below).
 
 ### The limit both libraries share
 
@@ -459,12 +462,37 @@ Measured on the 55 videos both libraries handled; the median ratio was exactly
 slower per video because it pays a full yt-dlp extraction — the price of
 surviving the watch-page block.
 
+### Success rate on a random sample
+
+The 480-video runs used a hand-marked subset, so they cannot say how often a
+video actually has captions. A separate run sampled **1,000 of the 9,776**
+videos uniformly (only 50 of them marked captioned) and processed every one:
+
+| outcome | videos | share |
+|---|---:|---:|
+| English transcript returned | 898 | 89.8% |
+| no captions at all | 96 | 9.6% |
+| English only as a machine translation | 5 | 0.5% |
+| video unavailable | 1 | 0.1% |
+
+**Zero blocks over 88 minutes.** Every one of the 101 misses was checked: none
+had a native English track that SubtitleKit failed to fetch. 96 have no captions
+at all; the 5 are non-English videos whose only `en` track is a machine
+translation, which SubtitleKit skips by default rather than silently returning
+translated text.
+
+That is also a warning about `captions_available`-style filters: 898 of the
+1,000 videos had captions, but only 50 were marked. Treat an unset flag as
+unknown, not as "no captions".
+
 ### Throughput
 
 Throughput is not stable enough to quote one number:
 
 - The 480-video run above averaged 15.0/min, dipped mid-run (10.6/min for
   #101–200), then recovered to ~18/min for the last 280.
+- The 1,000-video random sample averaged 11.4/min and **sped up** over time
+  (9.8 → 12.9/min).
 - An earlier 480-video run averaged 11.0/min and stayed near 10/min after the
   first hundred.
 

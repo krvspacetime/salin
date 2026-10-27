@@ -8,17 +8,17 @@ evaluating the README for 60 seconds.
 
 The benchmark (local `bench/RESULTS.md`, not committed) changes the positioning
 in one important way: **yt-subs is not immune to YouTube rate limits.** It
-survives the watch-page block that kills yta (479/480 captioned videos in one
-31.9-minute session, zero blocks, ~15 videos/min), but caption bytes come from
-the same `timedtext` endpoint and get 429'd too — one burst from yta took it
-down completely. The defensible claim is narrower and more useful: *yt-subs
-still inspects and resolves when yta is blocked, and at a sustainable pace it
-keeps fetching captions long after yta has died.*
+survives the watch-page block that kills yta (1,480 videos over ~2 hours with
+zero blocks, ~12–15 videos/min), but caption bytes come from the same
+`timedtext` endpoint and get 429'd too — one burst from yta took it down
+completely. The defensible claim is narrower and more useful: *yt-subs still
+inspects and resolves when yta is blocked, and at a sustainable pace it keeps
+fetching captions long after yta has died.*
 
 Below, P0 items are adoption blockers, P1 items are differentiators, P2 is
 polish.
 
-## Status (updated 2026-10-27)
+## Status (updated 2026-10-28)
 
 - **#1 License → MIT**: done. `LICENSE`, `pyproject.toml`, and the built
   wheel metadata now say MIT.
@@ -64,6 +64,13 @@ polish.
   single burst kept the endpoint closed **past 60 minutes** of polling; a fresh
   IP cleared it instantly. Content parity is exact (median ratio 1.000). The
   README has the full section; `bench/RESULTS.md` (local) has the raw runs.
+- **Unbiased sample: 898/1,000, zero blocks, 88 minutes.** The 480-video set was
+  hand-marked, so a second run sampled 1,000 of all 9,776 rows uniformly (only
+  50 marked captioned). 898 returned an English transcript, 96 have no captions
+  at all, 5 are non-English videos whose only `en` track is a machine
+  translation, and 1 video is unavailable. Re-checking all 101 misses found
+  **zero false negatives**. That also shows `captions_available = false` usually
+  means "unknown": 898/1,000 had captions but only 50 were marked.
 - Everything else is still open. Suggested order at the bottom of this file.
 
 ---
