@@ -1,6 +1,7 @@
 import pytest
 
 import yt_subs
+from tests.fixtures import MOCK_VIDEO_INFO_OK
 from yt_subs import YtSubs
 from yt_subs.error import YtSubsValueError
 from yt_subs.shared.models import (
@@ -11,7 +12,6 @@ from yt_subs.shared.models import (
     SubtitleFormat,
     SubtitleSource,
 )
-from tests.fixtures import MOCK_VIDEO_INFO_OK
 
 URL = "https://www.youtube.com/watch?v=abc123"
 

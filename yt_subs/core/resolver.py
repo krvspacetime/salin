@@ -11,16 +11,14 @@ import logging
 
 from yt_subs.languages import LanguageSpec
 from yt_subs.shared.models import (
-    LanguageMatch,
-    ResolvedSubtitle,
-    SubtitleAvailability,
-    SubtitleSourcePolicy,
-)
-from yt_subs.shared.models import (
     LangCode,
     LangCodeRequested,
     LangCodeResolved,
+    LanguageMatch,
+    ResolvedSubtitle,
+    SubtitleAvailability,
     SubtitleSource,
+    SubtitleSourcePolicy,
 )
 
 log = logging.getLogger(__name__)

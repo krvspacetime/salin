@@ -1,13 +1,14 @@
 from __future__ import annotations
 
+from email.message import Message
 from pathlib import Path
 from urllib.error import HTTPError
 
 import pytest
 
+from tests.fixtures import MOCK_VIDEO_INFO_OK
 from yt_subs import YtSubs
-from yt_subs.core import downloader
-from yt_subs.core import extractor
+from yt_subs.core import downloader, extractor
 from yt_subs.core.downloader import download_subtitles
 from yt_subs.core.fetcher import FetchedCues
 from yt_subs.core.ytdlp_opts import (
@@ -30,7 +31,6 @@ from yt_subs.shared.models import (
     VideoId,
     YtdlpVideoInfo,
 )
-from tests.fixtures import MOCK_VIDEO_INFO_OK
 
 URL = "https://www.youtube.com/watch?v=abc123"
 VTT_URL = "https://example.com/en.vtt"
@@ -160,6 +160,7 @@ def test_proxy_supports_direct_fetch(proxy, expected):
 
 class _FakeYDL:
     captured: list[dict] = []
+    extract_calls: list[tuple[str, bool]] = []
 
     def __init__(self, opts):
         type(self).captured.append(opts)
@@ -173,9 +174,6 @@ class _FakeYDL:
     def extract_info(self, url, download=False):
         type(self).extract_calls.append((url, download))
         return {"id": "abc123", "title": "t"}
-
-
-_FakeYDL.extract_calls = []
 
 
 @pytest.fixture
@@ -442,7 +440,7 @@ def test_expired_url_refresh_reuses_the_request_config(monkeypatch, tmp_path):
 
     def fake_urlopen(request, timeout=None):
         if request.full_url == VTT_URL:
-            raise HTTPError(VTT_URL, 403, "Forbidden", {}, None)
+            raise HTTPError(VTT_URL, 403, "Forbidden", Message(), None)
         return _FakeResponse(VTT_BODY)
 
     def fake_open(request, *, proxy, timeout):
@@ -473,8 +471,10 @@ def test_expired_url_refresh_reuses_the_request_config(monkeypatch, tmp_path):
         proxy="http://127.0.0.1:8080",
     )
 
-    assert files[0].sub_path == tmp_path / "abc123.en.vtt"
-    assert files[0].sub_path.read_bytes() == VTT_BODY
+    sub_path = files[0].sub_path
+    assert sub_path == tmp_path / "abc123.en.vtt"
+    assert sub_path is not None
+    assert sub_path.read_bytes() == VTT_BODY
     assert proxies_used == ["http://127.0.0.1:8080"] * 2
     assert extract_calls == [
         {

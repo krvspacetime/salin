@@ -19,7 +19,7 @@ def _matching_overlap(tail: list[str], head: list[str]) -> int:
     unrelated punctuation tokens compare equal and merge unrelated blocks.
     """
     for size in range(min(len(tail), len(head)), 0, -1):
-        pairs = zip(tail[-size:], head[:size])
+        pairs = zip(tail[-size:], head[:size], strict=True)
         if all(
             tail_key and head_key and tail_key == head_key
             for tail_key, head_key in pairs

@@ -1,18 +1,17 @@
 """Parse and validate language request specifications."""
 
 from __future__ import annotations
+
+from collections.abc import Iterable
 from typing import cast
 
-
+from yt_subs.error import LanguageParseError
 from yt_subs.shared.models import (
     LangCodeRequested,
     LangCodeResolved,
     LanguagesInput,
     LanguageSpec,
 )
-from yt_subs.error import LanguageParseError
-
-from collections.abc import Iterable
 
 
 def _variant_matches_requested(requested: str, variant: str) -> bool:

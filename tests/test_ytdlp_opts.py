@@ -1,5 +1,6 @@
-import pytest
 from pathlib import Path
+
+import pytest
 
 from yt_subs import YtSubs
 from yt_subs.core.ytdlp_opts import normalize_cookies, subtitle_download_opts

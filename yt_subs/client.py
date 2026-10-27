@@ -1,8 +1,23 @@
-from concurrent.futures import ThreadPoolExecutor, wait, FIRST_COMPLETED
-from typing import Iterable, Iterator, Unpack
-from pathlib import Path
 import logging
+from collections.abc import Iterable, Iterator
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
+from pathlib import Path
+from typing import Unpack
 
+from yt_subs.core import (
+    download_subtitles,
+    extract_info,
+    fetch_transcript_cues,
+    inspect_subtitle_availability,
+    inspect_subtitles,
+)
+from yt_subs.core.resolver import resolve_availability, resolve_subtitles
+from yt_subs.core.ytdlp_opts import (
+    normalize_cookiefile,
+    normalize_cookies,
+    normalize_proxy,
+    require_direct_fetch_proxy,
+)
 from yt_subs.error import (
     ExtractorError,
     LanguageParseError,
@@ -12,35 +27,21 @@ from yt_subs.error import (
     YtSubsError,
     YtSubsValueError,
 )
-from yt_subs.core.resolver import resolve_subtitles, resolve_availability
-from yt_subs.core.ytdlp_opts import (
-    normalize_cookiefile,
-    normalize_cookies,
-    normalize_proxy,
-    require_direct_fetch_proxy,
-)
-from yt_subs.core import (
-    extract_info,
-    fetch_transcript_cues,
-    inspect_subtitle_availability,
-    inspect_subtitles,
-    download_subtitles,
-)
-from yt_subs.languages import LanguageSpec, LanguagesInput, parse_languages
+from yt_subs.languages import LanguagesInput, LanguageSpec, parse_languages
 from yt_subs.shared.models import (
+    BrowserCookies,
+    DownloadOverrides,
+    DownloadStatus,
+    LanguageMatch,
     ResolvedSubtitle,
     SubtitleAvailability,
     SubtitleFile,
-    LanguageMatch,
+    SubtitleFormat,
+    SubtitleResult,
     SubtitleSource,
     SubtitleSourcePolicy,
-    SubtitleResult,
-    DownloadOverrides,
-    DownloadStatus,
     UrlStr,
     VideoId,
-    SubtitleFormat,
-    BrowserCookies,
     YtdlpVideoInfo,
 )
 from yt_subs.transcript import FetchedTranscript, TranscriptSnippet

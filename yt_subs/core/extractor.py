@@ -6,25 +6,26 @@ No download happens here — pure inspection.
 """
 
 from __future__ import annotations
-from urllib.parse import parse_qs, urlparse
+
 import logging
+from urllib.parse import parse_qs, urlparse
 
 import yt_dlp
 
 from yt_subs.core.ytdlp_opts import base_extract_opts
+from yt_subs.error import ExtractorError, VideoUnavailableError
 from yt_subs.shared.models import (
-    UrlStr,
-    SubtitleAvailability,
+    BrowserCookies,
+    LangCode,
     LangCodeAuto,
     LangCodeManual,
     LangCodeRequested,
+    SubtitleAvailability,
+    SubtitleTrack,
+    UrlStr,
     VideoId,
     YtdlpVideoInfo,
-    LangCode,
-    SubtitleTrack,
-    BrowserCookies,
 )
-from yt_subs.error import ExtractorError, VideoUnavailableError
 
 log = logging.getLogger(__name__)
 

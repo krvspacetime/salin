@@ -2,13 +2,6 @@ from __future__ import annotations
 
 import pytest
 
-from yt_subs import FetchedTranscript, TranscriptSnippet, YtSubs
-from yt_subs.error import (
-    LanguageParseError,
-    SubtitleDownloadError,
-    TranscriptUnavailableError,
-    YtSubsValueError,
-)
 from tests.fixtures import (
     MOCK_JSON3_CONTENT,
     MOCK_VIDEO_INFO_AUTO_ONLY,
@@ -16,6 +9,13 @@ from tests.fixtures import (
     MOCK_VIDEO_INFO_NO_SUBS,
     MOCK_VIDEO_INFO_OK,
     MOCK_VTT_CONTENT,
+)
+from yt_subs import FetchedTranscript, TranscriptSnippet, YtSubs
+from yt_subs.error import (
+    LanguageParseError,
+    SubtitleDownloadError,
+    TranscriptUnavailableError,
+    YtSubsValueError,
 )
 
 
@@ -161,6 +161,7 @@ def test_fetch_rejects_preserve_formatting(monkeypatch):
 
 
 def test_fetch_wraps_http_errors(monkeypatch):
+    from email.message import Message
     from urllib.error import HTTPError
 
     monkeypatch.setattr(
@@ -168,7 +169,7 @@ def test_fetch_wraps_http_errors(monkeypatch):
     )
 
     def boom(url, *, subtitle_format, **kwargs):
-        raise HTTPError(url, 429, "Too Many Requests", {}, None)
+        raise HTTPError(url, 429, "Too Many Requests", Message(), None)
 
     monkeypatch.setattr("yt_subs.core.fetcher.fetch_subtitle_bytes", boom)
 

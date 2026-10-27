@@ -78,8 +78,11 @@ def test_find_subtitle_file_refuses_to_escape_output_dir(tmp_path):
     assert find_subtitle_file(tmp_path, VIDEO_ID, LANG, SubtitleFormat.VTT) == dest
 
 
+_DEFAULT_LANG = LangCodeRequested("en")
+
+
 def _resolved(
-    land: LangCodeRequested = LangCodeRequested("en"),
+    land: LangCodeRequested = _DEFAULT_LANG,
 ) -> tuple[ResolvedSubtitle, ...]:
     return (
         ResolvedSubtitle(

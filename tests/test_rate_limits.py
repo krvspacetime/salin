@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from email.message import Message
 from email.utils import format_datetime
 from pathlib import Path
@@ -8,6 +8,7 @@ from urllib.error import HTTPError, URLError
 
 import pytest
 
+from tests.fixtures import MOCK_VIDEO_INFO_OK
 from yt_subs import RateLimitedError, YtSubs
 from yt_subs.core import downloader
 from yt_subs.core.downloader import (
@@ -28,7 +29,6 @@ from yt_subs.shared.models import (
     VideoId,
     YtdlpVideoInfo,
 )
-from tests.fixtures import MOCK_VIDEO_INFO_OK
 
 VTT_URL = "https://example.com/en.vtt"
 VTT_BODY = b"WEBVTT\n\n00:00:01.000 --> 00:00:03.000\nhi\n"
@@ -66,9 +66,7 @@ def test_parse_retry_after_delta_seconds():
 
 def test_parse_retry_after_http_date():
     headers = Message()
-    headers["Retry-After"] = format_datetime(
-        datetime.now(timezone.utc) + timedelta(seconds=60)
-    )
+    headers["Retry-After"] = format_datetime(datetime.now(UTC) + timedelta(seconds=60))
     value = parse_retry_after(headers)
     assert value is not None
     assert 55 <= value <= 60

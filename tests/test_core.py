@@ -2,11 +2,11 @@ import pytest
 import yt_dlp
 
 from yt_subs import YtSubs
-from yt_subs.languages import parse_languages
-from yt_subs.error import LanguageParseError, ExtractorError, VideoUnavailableError
-from yt_subs.core.resolver import resolve_subtitles
 from yt_subs.core.extractor import extract_info
-from yt_subs.shared.models import LanguageMatch, SubtitleSourcePolicy, UrlStr, LangCode
+from yt_subs.core.resolver import resolve_subtitles
+from yt_subs.error import ExtractorError, LanguageParseError, VideoUnavailableError
+from yt_subs.languages import parse_languages
+from yt_subs.shared.models import LangCode, LanguageMatch, SubtitleSourcePolicy, UrlStr
 
 
 def test_parse_languages_success():

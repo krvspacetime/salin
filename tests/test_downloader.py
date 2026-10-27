@@ -1,19 +1,20 @@
-import pytest
 from pathlib import Path
 
-from yt_subs import YtSubs
-from yt_subs.shared.models import (
-    DownloadStatus,
-    SubtitleFormat,
-    SubtitleFile,
-    LangCodeRequested,
-    LangCodeResolved,
-    SubtitleSource,
-)
-from yt_subs.error import VideoUnavailableError, YtSubsValueError
+import pytest
+
 from tests.fixtures import (
     MOCK_VIDEO_INFO_OK,
     MOCK_VTT_CONTENT,
+)
+from yt_subs import YtSubs
+from yt_subs.error import VideoUnavailableError, YtSubsValueError
+from yt_subs.shared.models import (
+    DownloadStatus,
+    LangCodeRequested,
+    LangCodeResolved,
+    SubtitleFile,
+    SubtitleFormat,
+    SubtitleSource,
 )
 
 

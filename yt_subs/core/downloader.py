@@ -4,11 +4,11 @@ import logging
 import random
 import re
 import time
+from collections.abc import Callable
 from dataclasses import replace
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from email.utils import parsedate_to_datetime
 from pathlib import Path
-from typing import Callable
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
 from urllib.request import ProxyHandler, Request, build_opener, urlopen
@@ -20,20 +20,20 @@ from yt_subs.core.ytdlp_opts import (
     proxy_supports_direct_fetch,
     subtitle_download_opts,
 )
+from yt_subs.error import ExtractorError, RateLimitedError, SubtitleDownloadError
 from yt_subs.shared.models import (
+    BrowserCookies,
     DownloadStatus,
+    LangCodeResolved,
     ResolvedSubtitle,
     SubtitleFile,
-    UrlStr,
-    LangCodeResolved,
     SubtitleFormat,
     SubtitleSource,
+    SubtitleTrack,
+    UrlStr,
     VideoId,
     YtdlpVideoInfo,
-    BrowserCookies,
-    SubtitleTrack,
 )
-from yt_subs.error import ExtractorError, RateLimitedError, SubtitleDownloadError
 
 log = logging.getLogger(__name__)
 
@@ -178,9 +178,9 @@ def parse_retry_after(headers) -> int | None:
     if when is None:
         return None
     if when.tzinfo is None:
-        when = when.replace(tzinfo=timezone.utc)
+        when = when.replace(tzinfo=UTC)
 
-    return max(int((when - datetime.now(timezone.utc)).total_seconds()), 0)
+    return max(int((when - datetime.now(UTC)).total_seconds()), 0)
 
 
 def _retry_delay(attempt: int) -> float:
