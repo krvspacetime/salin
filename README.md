@@ -1,63 +1,138 @@
-# yt-subs
+<p align="center">
+  <img src="assets/logo.svg" width="96" height="96" alt="yt-subs logo">
+</p>
 
-`yt-subs` is a small Python library for inspecting, resolving, downloading, and
-cleaning YouTube subtitle tracks.
+<h1 align="center">yt-subs</h1>
+
+<p align="center">
+  Inspect, resolve, download, and clean YouTube subtitle tracks from Python.
+</p>
+
+<p align="center">
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
+  <img alt="Python 3.12 | 3.13" src="https://img.shields.io/badge/python-3.12%20%7C%203.13-blue.svg">
+  <a href="https://github.com/krvspacetime/yt-subs/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/krvspacetime/yt-subs/actions/workflows/ci.yml/badge.svg"></a>
+  <img alt="Lint: ruff" src="https://img.shields.io/badge/lint-ruff-261230.svg">
+  <img alt="Types: mypy-style, checked with ty" src="https://img.shields.io/badge/types-ty-ffd43b.svg">
+  <a href="https://pypi.org/project/yt-subs/"><img alt="PyPI" src="https://img.shields.io/badge/pypi-soon-lightgrey.svg"></a>
+  <a href="https://github.com/sponsors/krvspacetime"><img alt="Sponsor" src="https://img.shields.io/badge/sponsor-%E2%9D%A4-ff69b4.svg"></a>
+</p>
+
+---
+
+`yt-subs` is a typed Python library for working with YouTube subtitle tracks. It
+inspects which tracks and formats a video has, resolves requested languages
+against language-match and source policies, downloads the captions (to disk or
+straight into memory as snippets), and cleans rolling auto-caption noise into
+prose you can read, index, or feed to a model.
+
+It is built on [yt-dlp](https://github.com/yt-dlp/yt-dlp), so it supports every
+site yt-dlp does, not just YouTube.
+
+## Why this exists
+
+`youtube-transcript-api` is a great default — small, in-memory, easy to install.
+It is also easy to break: it talks to YouTube's private player API, so when
+YouTube blocks your IP the library stops working entirely, and a burst of
+requests can get you a shared `429` with no clear signal.
+
+`yt-subs` uses yt-dlp's extraction, which is more resilient and keeps
+**inspecting and resolving** subtitle availability even when the caption
+endpoint is throttling. It also treats rate limits as a first-class result
+rather than a silent retry: you get `RateLimitedError` / `DownloadStatus.RATE_LIMITED`
+with the parsed `Retry-After`, and a bulk run can stop cleanly instead of
+hammering an endpoint that is already refusing it. Honest about the one limit it
+shares with everyone: caption *bytes* come from the same `timedtext` endpoint, so
+`yt-subs` can be rate-limited too — it just tells you instead of hiding it.
+
+## How it compares
+
+| | youtube-transcript-api | yt-subs |
+|---|---|---|
+| Snippets in memory | yes | yes (`fetch()`) |
+| Subtitle files on disk | no | yes (7 formats) |
+| Cleaning / dedup | no | yes |
+| Language resolution policies | limited | manual/auto, regional variants |
+| Bulk API | no | `download_many` with workers |
+| Browser cookies | no | yes |
+| Proxy / `cookiefile` | proxy only | `cookies`, `cookiefile`, `proxy` |
+| Explicit rate-limit error | `IpBlocked` | `RateLimitedError` + status |
+| Survives a watch-page IP block | no | yes (inspection still works) |
+| Typed package | yes | yes (`py.typed`) |
+| License | MIT | MIT |
+| Python | 3.9+ | 3.12+ |
 
 ## Install
 
-To add as dependency using `uv`:
+Prebuilt packages are coming to PyPI. Until then, install from git:
 
 ```bash
 uv add git+https://github.com/krvspacetime/yt-subs.git
 ```
 
-## Basic Usage
+## Quick start
 
 ```python
 from yt_subs import YtSubs
+
 client = YtSubs(languages="en")
 result = client.download("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
-# If `output_dir` is not specified, subtitles are saved to ./yt_subs_downloads
-# Override default by specifying output_dir to the client or in `download` or `download_many`
+# Subtitles are saved to ./yt_subs_downloads unless you set output_dir on the
+# client or on download()/download_many().
 ```
 
-Specify format.
+Prefer snippets in memory? Use `fetch()`:
+
+```python
+transcript = YtSubs(languages="en").fetch("dQw4w9WgXcQ")
+for snippet in transcript:
+    print(snippet.start, snippet.text)
+```
+
+## Downloading subtitles
+
+Pick a format:
 
 ```python
 client = YtSubs()
 result = client.download(
     "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-    subtitle_format="vtt")
+    subtitle_format="vtt",
+)
 ```
 
-Download more than one language:
+Download several languages in one call:
 
 ```python
 client = YtSubs(languages=["en", "de"])
 result = client.download("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
 print(result)
+```
+
+```text
 SubtitleResult(
     url='https://www.youtube.com/watch?v=dQw4w9WgXcQ',
     video_id='dQw4w9WgXcQ',
     title='Rick Astley - Never Gonna Give You Up (Official Video) (4K Remaster)',
-    subtitles=
-        (SubtitleFile(
+    subtitles=(
+        SubtitleFile(
             requested='en',
             resolved='en',
             source=<SubtitleSource.MANUAL: 'manual'>,
-            status=<DownloadStatus.OK: 'ok'>, 
+            status=<DownloadStatus.OK: 'ok'>,
             sub_path=WindowsPath('yt_subs_downloads/dQw4w9WgXcQ.en.vtt'),
             format=<SubtitleFormat.VTT: 'vtt'>,
             error=None),
         SubtitleFile(
             requested='de',
             resolved='de-DE',
-            source=<SubtitleSource.MANUAL: 'manual'>, 
-            status=<DownloadStatus.OK: 'ok'>, 
+            source=<SubtitleSource.MANUAL: 'manual'>,
+            status=<DownloadStatus.OK: 'ok'>,
             sub_path=WindowsPath('yt_subs_downloads/dQw4w9WgXcQ.de-DE.vtt'),
-            format=<SubtitleFormat.VTT: 'vtt'>, 
+            format=<SubtitleFormat.VTT: 'vtt'>,
             error=None)))
 ```
+
 ## Fetch transcripts in memory
 
 `fetch()` is the `youtube-transcript-api`-shaped path: it returns snippets
@@ -85,7 +160,7 @@ transcript.text                      # every snippet joined with a space
 fetches the `json3` track when one exists (falling back to `srv3`, `srv1`,
 `srv2`, `ttml`, or `vtt`), in memory.
 
-### Migrating from youtube-transcript-api
+### Migrating from `youtube-transcript-api`
 
 ```diff
 - from youtube_transcript_api import YouTubeTranscriptApi
@@ -93,6 +168,8 @@ fetches the `json3` track when one exists (falling back to `srv3`, `srv1`,
 + from yt_subs import YtSubs
 + transcript = YtSubs(languages="en").fetch(video_id)
 ```
+
+The returned objects mirror yta's:
 
 ```python
 from yt_subs import FetchedTranscript, TranscriptSnippet
@@ -113,48 +190,58 @@ Differences to know about:
 - A `429` raises `RateLimitedError` (a `SubtitleDownloadError` subclass) with
   `.retry_after` set from the server's `Retry-After` header when present.
 
-## Inspect subtitles
+## Inspecting available subtitles
 
-Inspect shows the available auto and manual subs as well as their available formats.
+`inspect()` reports the available manual and automatic tracks plus the formats
+each one offers.
 
 ```python
 client = YtSubs()
-result = client.inspect(url)
-print(result)
+availability = client.inspect(url)
+print(availability)
+```
+
+```text
 SubtitleAvailability(
     url='https://www.youtube.com/watch?v=dQw4w9WgXcQ',
     video_id='dQw4w9WgXcQ',
     title='Rick Astley - Never Gonna Give You Up (Official Video) (4K Remaster)',
     manual=frozenset({'pt-BR', 'es-419', 'de-DE', 'en', 'ja'}),
     auto=frozenset({'en', 'en-orig'}),
-    manual_formats={'en': frozenset({'srv3', 'srt', 'srv1', 'vtt', 'srv2', 'ttml', 'json3'}), 'de-DE': frozenset({'srv3', 'srt', 'srv1', 'vtt', 'srv2', 'ttml', 'json3'}), 'ja': frozenset({'srv3', 'srt', 'srv1', 'vtt', 'srv2', 'ttml', 'json3'}), 'pt-BR': frozenset({'srv3', 'srt', 'srv1', 'vtt', 'srv2', 'ttml', 'json3'}), 'es-419': frozenset({'srv3', 'srt', 'srv1', 'vtt', 'srv2', 'ttml', 'json3'})},
-    auto_formats={'en-orig': frozenset({'srv3', 'srt', 'srv1', 'vtt', 'srv2', 'ttml', 'json3'}), 'en': frozenset({'srv3', 'srt', 'srv1', 'vtt', 'srv2', 'ttml', 'json3'})})
+    manual_formats={'en': frozenset({'srv3', 'srt', 'srv1', 'vtt', 'srv2', 'ttml', 'json3'}), ...},
+    auto_formats={'en-orig': frozenset({'srv3', 'srt', 'srv1', 'vtt', 'srv2', 'ttml', 'json3'}), ...})
 ```
 
-## Resolve Available Subtitles
+## Resolving languages
 
-Resolve gives the `ResolvedSubtitle` containing the actual `resolved` track according to the requested, source policy and language match params.
+`resolve()` returns the `ResolvedSubtitle` for each request according to the
+`language_match`, `source_policy`, and per-language alias list.
 
 ```python
 client = YtSubs()
 result = client.resolve(
     url,
-    language_match="exact", #LanguageMatch.EXACT
-    source_policy="manual_only", #SubtitleSourcePolicy.MANUAL_ONLY
+    language_match="exact",          # LanguageMatch.EXACT
+    source_policy="manual_only",     # SubtitleSourcePolicy.MANUAL_ONLY
     languages={"en": ["en-US", "en-GB"], "de": ["de-DE", "de-AT"]},
 )
 print(result)
-(ResolvedSubtitle(requested='en', resolved='en', source=None), ResolvedSubtitle(requested='de', resolved=None, source=None))
+# (ResolvedSubtitle(requested='en', resolved='en', source=None),
+#  ResolvedSubtitle(requested='de', resolved=None, source=None))
 ```
-If `resolved` is `None`, it means the resolver was not able to resolve the requested language track according to the availablity, language match and source policy.
 
-## Language match and source policy
+If `resolved` is `None`, the resolver could not satisfy the request under the
+given availability, language match, and source policy.
 
-Both of them honor each other. For example if language_match is set to "exact" but source_policty is "auto_only", the client will ignore (not download) a requested "en" track even if it's technically available as a manual track.
+### Language match and source policy
+
+Both settings constrain each other. For example, if `language_match="exact"`
+but `source_policy="auto_only"`, the client will not use a requested `en`
+track even when a manual one is available.
 
 ```python
-LanguageMatch.EXACT # "en" only resolves to "en"
-LanguageMatch.REGIONAL # "en" can resolve to en-US, en-orig, etc.
+LanguageMatch.EXACT        # "en" only resolves to "en"
+LanguageMatch.REGIONAL     # "en" can resolve to en-US, en-orig, etc.
 
 SubtitleSourcePolicy.MANUAL_ONLY
 SubtitleSourcePolicy.AUTO_ONLY
@@ -165,10 +252,10 @@ SubtitleSourcePolicy.AUTO_THEN_MANUAL
 ## One metadata fetch per call
 
 `inspect()`, `resolve()`, `fetch()`, and `download()` each fetch the video's
-metadata once.
-That fetch averages ~4 seconds and is about 98% of a download's wall time; the
-subtitle bytes themselves are ~0.3s. Calling all three on one video costs
-roughly 12s, almost all of it the same metadata fetched three times.
+metadata once. That fetch averages ~4 seconds and is about 98% of a download's
+wall time; the subtitle bytes themselves are ~0.3s. Calling all of them on one
+video costs roughly 12s, almost all of it the same metadata fetched three
+times.
 
 `download()` already resolves languages and reports every requested language,
 so most flows need a single call:
@@ -200,7 +287,7 @@ rejected — yt-dlp needs the full record (`id`, `extractor`, and the subtitle
 tracks) to download anything, so a trimmed dict would fail much later. Playlist
 results are rejected too; `yt-subs` downloads single videos only.
 
-## Clean transcripts
+## Cleaning transcripts
 
 `download()` gives you the subtitle file exactly as YouTube serves it. That file
 is a poor thing to read, index, or feed to a model, and `clean_transcript()`
@@ -212,7 +299,7 @@ Auto-generated captions carry two kinds of noise. Captions are written as they
 are spoken, in short overlapping windows, so the same phrase lands on screen
 three times in a row:
 
-```
+```text
 00:48:18.950 --> 00:48:18.960 align:start position:0%
 multiple hours to capture the same level
 
@@ -224,7 +311,7 @@ of<00:48:19.119><c> mistake</c><00:48:19.520><c> because</c><00:48:20.000><c> it
 of mistake because it requires like
 ```
 
-Those three cues are on screen *simultaneously* -- a scrolling window, not three
+Those three cues are on screen *simultaneously* — a scrolling window, not three
 successive statements. Read in file order, "multiple hours to capture the same
 level" and "of mistake because it requires like" each appear twice, plus the
 inline `<00:48:19.119><c>` word-timing tags are not text at all.
@@ -245,13 +332,13 @@ overlapping windows, and returns one paragraph.
 
 The three cues above become:
 
-```
+```text
 multiple hours to capture the same level of mistake because it requires like
 ```
 
 and the `srv3` file becomes:
 
-```
+```text
 We're no strangers to love You know the rules and so do I
 ```
 
@@ -289,7 +376,7 @@ words longer than the same video's other six formats (15734 vs 15693, 0.3%).
 Auto-caption `vtt` is the only rolling format, and YouTube sometimes repeats a
 word *inside* a single cue, where the overlap merge cannot see it:
 
-```
+```text
 cue: startup world in Belgium. I did that for for a little while and then moved to
 ```
 
@@ -299,17 +386,20 @@ alone. This only affects auto-generated captions, and only `vtt`; manually
 authored tracks are usually not rolling. If you need the exact text, prefer
 `srt`, `srv1`, `srv3`, `json3` or `ttml`.
 
-## Bulk Downloads
+## Bulk downloads
 
-`download_many()` returns `Iterator[SubtitleResult]` so it's recommended for bulk downloads. It is implemented using `ThreadPoolExecutor` so the `max_workers` can be set (defaults to 1).
+`download_many()` returns an `Iterator[SubtitleResult]`, so it is the right tool
+for batches. It is implemented with a `ThreadPoolExecutor`, and `max_workers`
+can be set (default `1`).
 
-> Note: `download_many` is both faster and more memory efficient than simply calling `download` for every URL. Results are yielded as they finish, so it does not preserve input order unless `max_workers=1`.
+> **Note:** `download_many` is both faster and more memory efficient than
+> calling `download` in a loop. Results are yielded as they finish, so input
+> order is not preserved unless `max_workers=1`.
 
 ```python
 client = YtSubs()
 
-results = client.download_many(urls, languages="en", max_workers=3):
-for result in results:
+for result in client.download_many(urls, languages="en", max_workers=3):
     if not result.processable:
         continue
     for subtitle in result.ok_subs:
@@ -336,7 +426,7 @@ mean: one run at `max_workers=4` took 38.4s — slower than sequential — while
 another took 18.8s. If you see bulk jobs stalling, drop to 2–3 workers rather
 than raising it.
 
-## Throttling
+## Throttling and rate limits
 
 `yt-subs` adds no artificial delay by default: `sleep_interval_subtitles`
 defaults to `0` (the same default yt-dlp uses for its own
@@ -441,3 +531,32 @@ at `download()`, which hands the fetch to yt-dlp and supports every scheme.
 > remote site with every request. Only use it when you trust the source, and
 > prefer a `cookies.txt` file you control over a browser profile on shared
 > machines.
+
+## Performance notes
+
+- **One extraction per video.** Metadata extraction is ~4s and dominates wall
+  time; the caption bytes are ~0.3s. Reuse `info=` across `inspect`/`resolve`/
+  `fetch`/`download` (see [One metadata fetch per call](#one-metadata-fetch-per-call)).
+- **Pooled yt-dlp clients.** `extract_info()` keeps one `yt-dlp` client per
+  thread and per request-config, so back-to-back calls reuse the connection and
+  skip the ~0.3s client setup. A repeated extract drops from ~3.0s to ~1.2–1.6s
+  in our measurements.
+- **Bounded retries.** `yt-dlp`'s defaults are patient; `yt-subs` caps
+  `retries`, `extractor_retries`, and `socket_timeout` so a stuck request
+  fails fast instead of stalling a batch.
+
+## Development
+
+```bash
+uv sync --all-groups
+uv run ruff check
+uv run ruff format --check
+uv run ty check
+uv run pytest
+```
+
+CI runs the same commands on Python 3.12 and 3.13.
+
+## License
+
+MIT — see [LICENSE](LICENSE).
