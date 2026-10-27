@@ -17,7 +17,7 @@ from __future__ import annotations
 from pathlib import Path
 from xml.etree import ElementTree
 
-from yt_subs.cleaner.normalize import normalize_caption_text
+from salin.cleaner.normalize import normalize_caption_text
 
 from .common import ParsedCue, element_text, iter_local, timestamp_to_ms
 

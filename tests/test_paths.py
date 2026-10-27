@@ -1,14 +1,14 @@
 import pytest
 
-from yt_subs.core import downloader
-from yt_subs.core.downloader import (
+from salin.core import downloader
+from salin.core.downloader import (
     download_subtitles,
     expected_subtitle_path,
     find_subtitle_file,
     safe_filename_component,
 )
-from yt_subs.error import SubtitleDownloadError
-from yt_subs.shared.models import (
+from salin.error import SubtitleDownloadError
+from salin.shared.models import (
     DownloadStatus,
     LangCodeRequested,
     LangCodeResolved,
@@ -94,7 +94,7 @@ def _resolved(
 
 
 def test_download_sanitizes_unsafe_video_id(monkeypatch, tmp_path):
-    import yt_subs.core.downloader as downloader
+    import salin.core.downloader as downloader
 
     monkeypatch.setattr(
         downloader,
@@ -139,7 +139,7 @@ def test_download_uses_sanitized_id_for_ytdlp_outtmpl(monkeypatch, tmp_path):
         captured.update(kwargs)
         return None
 
-    monkeypatch.setattr("yt_subs.core.downloader._download_subtitles_ytdlp", fake_ytdlp)
+    monkeypatch.setattr("salin.core.downloader._download_subtitles_ytdlp", fake_ytdlp)
 
     download_subtitles(
         UrlStr("https://www.youtube.com/watch?v=x"),
@@ -325,7 +325,7 @@ def test_direct_download_falls_back_when_response_rejected(monkeypatch, tmp_path
         ).write_bytes(b"WEBVTT")
         return None
 
-    monkeypatch.setattr("yt_subs.core.downloader._download_subtitles_ytdlp", fake_ytdlp)
+    monkeypatch.setattr("salin.core.downloader._download_subtitles_ytdlp", fake_ytdlp)
     _patch_fetch(monkeypatch, b"<html>denied</html>")
 
     info: YtdlpVideoInfo = {

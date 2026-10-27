@@ -5,8 +5,8 @@ from __future__ import annotations
 from collections.abc import Iterable
 from typing import cast
 
-from yt_subs.error import LanguageParseError
-from yt_subs.shared.models import (
+from salin.error import LanguageParseError
+from salin.shared.models import (
     LangCodeRequested,
     LangCodeResolved,
     LanguagesInput,
@@ -80,7 +80,7 @@ def parse_languages(languages: LanguagesInput | None) -> tuple[LanguageSpec, ...
       - [{"en": ["en-orig", "en-US"]}, {"de": ["de-DE"]}]
     """
     if languages is None:
-        raise LanguageParseError("""'languages' must be set in either the YtSubs client constructor, 'download', or 'download_many'.
+        raise LanguageParseError("""'languages' must be set in either the Salin client constructor, 'download', or 'download_many'.
 Accepted forms:
     - "en"
     - ["en", "de"]

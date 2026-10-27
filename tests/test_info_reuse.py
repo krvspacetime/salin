@@ -1,10 +1,9 @@
 import pytest
 
-import yt_subs
-from tests.fixtures import MOCK_VIDEO_INFO_OK
-from yt_subs import YtSubs
-from yt_subs.error import YtSubsValueError
-from yt_subs.shared.models import (
+import salin
+from salin import Salin
+from salin.error import SalinValueError
+from salin.shared.models import (
     DownloadStatus,
     LangCodeRequested,
     LangCodeResolved,
@@ -12,12 +11,13 @@ from yt_subs.shared.models import (
     SubtitleFormat,
     SubtitleSource,
 )
+from tests.fixtures import MOCK_VIDEO_INFO_OK
 
 URL = "https://www.youtube.com/watch?v=abc123"
 
 
 def test_extract_info_is_importable_from_the_package_root():
-    assert yt_subs.extract_info is yt_subs.core.extract_info
+    assert salin.extract_info is salin.core.extract_info
 
 
 def _exploding_extract(url, **kwargs):
@@ -31,7 +31,7 @@ def _patch_extract(monkeypatch):
         calls.append(url)
         return dict(MOCK_VIDEO_INFO_OK)
 
-    monkeypatch.setattr("yt_subs.client.extract_info", fake_extract)
+    monkeypatch.setattr("salin.client.extract_info", fake_extract)
     return calls
 
 
@@ -53,14 +53,14 @@ def _patch_downloader(monkeypatch, tmp_path):
             ),
         )
 
-    monkeypatch.setattr("yt_subs.client.download_subtitles", fake_download_subtitles)
+    monkeypatch.setattr("salin.client.download_subtitles", fake_download_subtitles)
     return calls
 
 
 def test_inspect_reuses_passed_info(monkeypatch):
-    monkeypatch.setattr("yt_subs.client.extract_info", _exploding_extract)
+    monkeypatch.setattr("salin.client.extract_info", _exploding_extract)
 
-    client = YtSubs()
+    client = Salin()
     availability = client.inspect(URL, info=MOCK_VIDEO_INFO_OK)
 
     assert availability.video_id == "abc123"
@@ -69,9 +69,9 @@ def test_inspect_reuses_passed_info(monkeypatch):
 
 
 def test_resolve_reuses_passed_info(monkeypatch):
-    monkeypatch.setattr("yt_subs.client.extract_info", _exploding_extract)
+    monkeypatch.setattr("salin.client.extract_info", _exploding_extract)
 
-    client = YtSubs(languages="en")
+    client = Salin(languages="en")
     resolved = client.resolve(URL, info=MOCK_VIDEO_INFO_OK)
 
     assert resolved[0].requested == "en"
@@ -81,9 +81,9 @@ def test_resolve_reuses_passed_info(monkeypatch):
 
 def test_download_reuses_passed_info(monkeypatch, tmp_path):
     calls = _patch_downloader(monkeypatch, tmp_path)
-    monkeypatch.setattr("yt_subs.client.extract_info", _exploding_extract)
+    monkeypatch.setattr("salin.client.extract_info", _exploding_extract)
 
-    client = YtSubs(languages="en", output_dir=tmp_path)
+    client = Salin(languages="en", output_dir=tmp_path)
     result = client.download(URL, info=MOCK_VIDEO_INFO_OK)
 
     assert result.video_id == "abc123"
@@ -93,10 +93,10 @@ def test_download_reuses_passed_info(monkeypatch, tmp_path):
 
 def test_download_passes_the_info_object_through_unchanged(monkeypatch, tmp_path):
     calls = _patch_downloader(monkeypatch, tmp_path)
-    monkeypatch.setattr("yt_subs.client.extract_info", _exploding_extract)
+    monkeypatch.setattr("salin.client.extract_info", _exploding_extract)
 
     info = MOCK_VIDEO_INFO_OK
-    YtSubs(languages="en", output_dir=tmp_path).download(URL, info=info)
+    Salin(languages="en", output_dir=tmp_path).download(URL, info=info)
 
     assert calls[0]["info"] is info
 
@@ -114,28 +114,28 @@ def test_download_passes_the_info_object_through_unchanged(monkeypatch, tmp_path
     ],
 )
 def test_invalid_info_is_rejected_by_every_entry_point(monkeypatch, bad_info):
-    monkeypatch.setattr("yt_subs.client.extract_info", _exploding_extract)
-    client = YtSubs(languages="en")
+    monkeypatch.setattr("salin.client.extract_info", _exploding_extract)
+    client = Salin(languages="en")
 
-    with pytest.raises(YtSubsValueError):
+    with pytest.raises(SalinValueError):
         client.inspect(URL, info=bad_info)
 
-    with pytest.raises(YtSubsValueError):
+    with pytest.raises(SalinValueError):
         client.resolve(URL, info=bad_info)
 
-    with pytest.raises(YtSubsValueError):
+    with pytest.raises(SalinValueError):
         client.download(URL, info=bad_info)
 
 
 def test_invalid_info_is_rejected_before_downloading(monkeypatch):
     monkeypatch.setattr(
-        "yt_subs.client.download_subtitles",
+        "salin.client.download_subtitles",
         lambda *a, **k: (_ for _ in ()).throw(AssertionError("must not download")),
     )
-    monkeypatch.setattr("yt_subs.client.extract_info", _exploding_extract)
+    monkeypatch.setattr("salin.client.extract_info", _exploding_extract)
 
-    with pytest.raises(YtSubsValueError):
-        YtSubs(languages="en").download(
+    with pytest.raises(SalinValueError):
+        Salin(languages="en").download(
             URL, info={"id": "abc123", "subtitles": {"en": [{"ext": "vtt"}]}}
         )
 
@@ -143,7 +143,7 @@ def test_invalid_info_is_rejected_before_downloading(monkeypatch):
 def test_missing_info_still_extracts_once_per_call(monkeypatch):
     calls = _patch_extract(monkeypatch)
 
-    client = YtSubs(languages="en")
+    client = Salin(languages="en")
     client.inspect(URL)
     client.resolve(URL)
 
@@ -152,9 +152,9 @@ def test_missing_info_still_extracts_once_per_call(monkeypatch):
 
 def test_pipeline_shares_one_extraction(monkeypatch, tmp_path):
     calls = _patch_downloader(monkeypatch, tmp_path)
-    monkeypatch.setattr("yt_subs.client.extract_info", _exploding_extract)
+    monkeypatch.setattr("salin.client.extract_info", _exploding_extract)
 
-    client = YtSubs(languages="en", output_dir=tmp_path)
+    client = Salin(languages="en", output_dir=tmp_path)
     info = MOCK_VIDEO_INFO_OK
 
     availability = client.inspect(URL, info=info)

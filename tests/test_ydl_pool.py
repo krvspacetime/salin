@@ -6,9 +6,9 @@ import threading
 
 import pytest
 
-from yt_subs.core import extractor
-from yt_subs.error import VideoUnavailableError
-from yt_subs.shared.models import UrlStr
+from salin.core import extractor
+from salin.error import VideoUnavailableError
+from salin.shared.models import UrlStr
 
 URL = "https://www.youtube.com/watch?v=abc123"
 OTHER_URL = "https://www.youtube.com/watch?v=zzz999zzz9"

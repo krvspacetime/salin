@@ -14,9 +14,9 @@ from urllib.parse import parse_qs, urlparse
 
 import yt_dlp
 
-from yt_subs.core.ytdlp_opts import base_extract_opts
-from yt_subs.error import ExtractorError, VideoUnavailableError
-from yt_subs.shared.models import (
+from salin.core.ytdlp_opts import base_extract_opts
+from salin.error import ExtractorError, VideoUnavailableError
+from salin.shared.models import (
     BrowserCookies,
     LangCode,
     LangCodeAuto,

@@ -1,12 +1,12 @@
 import pytest
 import yt_dlp
 
-from yt_subs import YtSubs
-from yt_subs.core.extractor import extract_info
-from yt_subs.core.resolver import resolve_subtitles
-from yt_subs.error import ExtractorError, LanguageParseError, VideoUnavailableError
-from yt_subs.languages import parse_languages
-from yt_subs.shared.models import LangCode, LanguageMatch, SubtitleSourcePolicy, UrlStr
+from salin import Salin
+from salin.core.extractor import extract_info
+from salin.core.resolver import resolve_subtitles
+from salin.error import ExtractorError, LanguageParseError, VideoUnavailableError
+from salin.languages import parse_languages
+from salin.shared.models import LangCode, LanguageMatch, SubtitleSourcePolicy, UrlStr
 
 
 def test_parse_languages_success():
@@ -161,7 +161,7 @@ def test_extract_info_generic_error(monkeypatch):
 
 
 def test_client_optional_languages_error():
-    client = YtSubs()
+    client = Salin()
     with pytest.raises(LanguageParseError) as excinfo:
         client.resolve("https://www.youtube.com/watch?v=abc123")
     assert "No languages specified" in str(excinfo.value)
@@ -172,7 +172,7 @@ def test_client_optional_languages_error():
 
 
 def test_client_string_enum_parameters():
-    client = YtSubs(
+    client = Salin(
         languages="en",
         language_match="exact",
         source_policy="manual_only",
@@ -182,14 +182,14 @@ def test_client_string_enum_parameters():
 
 
 def test_client_sleep_defaults_do_not_add_delay():
-    client = YtSubs(languages="en")
+    client = Salin(languages="en")
 
     assert client.sleep_interval_subtitles == 0
     assert client.sleep_interval_requests == 1
 
     assert (
-        YtSubs(languages="en", sleep_interval_subtitles=2).sleep_interval_subtitles == 2
+        Salin(languages="en", sleep_interval_subtitles=2).sleep_interval_subtitles == 2
     )
     assert (
-        YtSubs(languages="en", sleep_interval_subtitles=0).sleep_interval_subtitles == 0
+        Salin(languages="en", sleep_interval_subtitles=0).sleep_interval_subtitles == 0
     )

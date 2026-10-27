@@ -5,9 +5,9 @@ Public surface of the cleaner package. Import from here rather than from
 sub-modules so internal reorganisation doesn't break callers.
 """
 
-from yt_subs.cleaner.cleaner import clean_cues, clean_transcript
-from yt_subs.cleaner.dedup import deduplicate_blocks, sanitize_word
-from yt_subs.cleaner.normalize import normalize_caption_text, strip_inline_markup
+from salin.cleaner.cleaner import clean_cues, clean_transcript
+from salin.cleaner.dedup import deduplicate_blocks, sanitize_word
+from salin.cleaner.normalize import normalize_caption_text, strip_inline_markup
 
 __all__ = [
     "clean_cues",

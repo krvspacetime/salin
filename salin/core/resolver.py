@@ -9,8 +9,8 @@ from __future__ import annotations
 
 import logging
 
-from yt_subs.languages import LanguageSpec
-from yt_subs.shared.models import (
+from salin.languages import LanguageSpec
+from salin.shared.models import (
     LangCode,
     LangCodeRequested,
     LangCodeResolved,

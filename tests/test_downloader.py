@@ -2,13 +2,9 @@ from pathlib import Path
 
 import pytest
 
-from tests.fixtures import (
-    MOCK_VIDEO_INFO_OK,
-    MOCK_VTT_CONTENT,
-)
-from yt_subs import YtSubs
-from yt_subs.error import VideoUnavailableError, YtSubsValueError
-from yt_subs.shared.models import (
+from salin import Salin
+from salin.error import SalinValueError, VideoUnavailableError
+from salin.shared.models import (
     DownloadStatus,
     LangCodeRequested,
     LangCodeResolved,
@@ -16,14 +12,18 @@ from yt_subs.shared.models import (
     SubtitleFormat,
     SubtitleSource,
 )
+from tests.fixtures import (
+    MOCK_VIDEO_INFO_OK,
+    MOCK_VTT_CONTENT,
+)
 
 
 def test_client_inspect(monkeypatch):
     monkeypatch.setattr(
-        "yt_subs.client.extract_info", lambda url, **kwargs: MOCK_VIDEO_INFO_OK
+        "salin.client.extract_info", lambda url, **kwargs: MOCK_VIDEO_INFO_OK
     )
 
-    client = YtSubs(languages="en")
+    client = Salin(languages="en")
     availability = client.inspect("https://www.youtube.com/watch?v=abc123")
 
     assert availability.video_id == "abc123"
@@ -31,20 +31,20 @@ def test_client_inspect(monkeypatch):
     assert "de" in availability.auto
 
 
-def test_invalid_format_override_raises_yt_subs_error():
-    client = YtSubs(languages="en")
+def test_invalid_format_override_raises_salin_error():
+    client = Salin(languages="en")
 
-    with pytest.raises(YtSubsValueError):
+    with pytest.raises(SalinValueError):
         client.download(
             "https://www.youtube.com/watch?v=abc123", subtitle_format="vvtt"
         )
 
-    with pytest.raises(YtSubsValueError):
-        YtSubs(languages="en", language_match="exactly")
+    with pytest.raises(SalinValueError):
+        Salin(languages="en", language_match="exactly")
 
 
 def test_download_many_survives_bad_format_override():
-    client = YtSubs(languages="en")
+    client = Salin(languages="en")
     urls = [
         "https://www.youtube.com/watch?v=one",
         "https://www.youtube.com/watch?v=two",
@@ -60,7 +60,7 @@ def test_download_many_survives_bad_format_override():
 
 def test_download_many_survives_bad_languages_override(monkeypatch):
     monkeypatch.setattr(
-        "yt_subs.client.extract_info", lambda url, **kwargs: MOCK_VIDEO_INFO_OK
+        "salin.client.extract_info", lambda url, **kwargs: MOCK_VIDEO_INFO_OK
     )
 
     def mock_download_subtitles(*args, **kwargs):
@@ -75,9 +75,9 @@ def test_download_many_survives_bad_languages_override(monkeypatch):
             ),
         )
 
-    monkeypatch.setattr("yt_subs.client.download_subtitles", mock_download_subtitles)
+    monkeypatch.setattr("salin.client.download_subtitles", mock_download_subtitles)
 
-    client = YtSubs()
+    client = Salin()
     results = list(
         client.download_many(
             ["https://www.youtube.com/watch?v=one"], languages={"en": ["es-ES"]}
@@ -91,15 +91,15 @@ def test_download_many_survives_bad_languages_override(monkeypatch):
 
 def test_download_many_survives_filesystem_errors(monkeypatch):
     monkeypatch.setattr(
-        "yt_subs.client.extract_info", lambda url, **kwargs: MOCK_VIDEO_INFO_OK
+        "salin.client.extract_info", lambda url, **kwargs: MOCK_VIDEO_INFO_OK
     )
 
     def mock_download_subtitles(*args, **kwargs):
         raise OSError("disk full")
 
-    monkeypatch.setattr("yt_subs.client.download_subtitles", mock_download_subtitles)
+    monkeypatch.setattr("salin.client.download_subtitles", mock_download_subtitles)
 
-    client = YtSubs(languages="en")
+    client = Salin(languages="en")
     results = list(client.download_many(["https://www.youtube.com/watch?v=one"]))
 
     assert len(results) == 1
@@ -111,10 +111,10 @@ def test_download_many_survives_filesystem_errors(monkeypatch):
 
 def test_client_resolve(monkeypatch):
     monkeypatch.setattr(
-        "yt_subs.client.extract_info", lambda url, **kwargs: MOCK_VIDEO_INFO_OK
+        "salin.client.extract_info", lambda url, **kwargs: MOCK_VIDEO_INFO_OK
     )
 
-    client = YtSubs(languages="en")
+    client = Salin(languages="en")
     resolved = client.resolve("https://www.youtube.com/watch?v=abc123")
 
     assert len(resolved) == 1
@@ -125,7 +125,7 @@ def test_client_resolve(monkeypatch):
 
 def test_client_download_success(monkeypatch, tmp_path):
     monkeypatch.setattr(
-        "yt_subs.client.extract_info", lambda url, **kwargs: MOCK_VIDEO_INFO_OK
+        "salin.client.extract_info", lambda url, **kwargs: MOCK_VIDEO_INFO_OK
     )
 
     def mock_download_subtitles(*args, **kwargs):
@@ -145,9 +145,9 @@ def test_client_download_success(monkeypatch, tmp_path):
             ),
         )
 
-    monkeypatch.setattr("yt_subs.client.download_subtitles", mock_download_subtitles)
+    monkeypatch.setattr("salin.client.download_subtitles", mock_download_subtitles)
 
-    client = YtSubs(languages="en", output_dir=tmp_path)
+    client = Salin(languages="en", output_dir=tmp_path)
     result = client.download("https://www.youtube.com/watch?v=abc123")
 
     assert result.video_id == "abc123"
@@ -168,7 +168,7 @@ def test_client_download_many_graceful_failures(monkeypatch):
             raise VideoUnavailableError("Video is unavailable")
         return MOCK_VIDEO_INFO_OK
 
-    monkeypatch.setattr("yt_subs.client.extract_info", mock_extract_info)
+    monkeypatch.setattr("salin.client.extract_info", mock_extract_info)
 
     def mock_download_subtitles(*args, **kwargs):
         return (
@@ -182,9 +182,9 @@ def test_client_download_many_graceful_failures(monkeypatch):
             ),
         )
 
-    monkeypatch.setattr("yt_subs.client.download_subtitles", mock_download_subtitles)
+    monkeypatch.setattr("salin.client.download_subtitles", mock_download_subtitles)
 
-    client = YtSubs(languages="en")
+    client = Salin(languages="en")
     urls = [
         "https://www.youtube.com/watch?v=fail",
         "https://www.youtube.com/watch?v=success",
@@ -212,10 +212,10 @@ def test_client_download_many_graceful_failures(monkeypatch):
 
 def test_client_constructor_no_languages_inspect_works(monkeypatch):
     monkeypatch.setattr(
-        "yt_subs.client.extract_info", lambda url, **kwargs: MOCK_VIDEO_INFO_OK
+        "salin.client.extract_info", lambda url, **kwargs: MOCK_VIDEO_INFO_OK
     )
 
-    client = YtSubs()
+    client = Salin()
     availability = client.inspect("https://www.youtube.com/watch?v=abc123")
 
     assert availability.video_id == "abc123"

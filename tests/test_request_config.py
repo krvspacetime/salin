@@ -6,12 +6,11 @@ from urllib.error import HTTPError
 
 import pytest
 
-from tests.fixtures import MOCK_VIDEO_INFO_OK
-from yt_subs import YtSubs
-from yt_subs.core import downloader, extractor
-from yt_subs.core.downloader import download_subtitles
-from yt_subs.core.fetcher import FetchedCues
-from yt_subs.core.ytdlp_opts import (
+from salin import Salin
+from salin.core import downloader, extractor
+from salin.core.downloader import download_subtitles
+from salin.core.fetcher import FetchedCues
+from salin.core.ytdlp_opts import (
     PROXY_SCHEMES,
     base_extract_opts,
     normalize_cookiefile,
@@ -19,8 +18,8 @@ from yt_subs.core.ytdlp_opts import (
     proxy_supports_direct_fetch,
     subtitle_download_opts,
 )
-from yt_subs.error import YtSubsValueError
-from yt_subs.shared.models import (
+from salin.error import SalinValueError
+from salin.shared.models import (
     DownloadStatus,
     LangCodeRequested,
     LangCodeResolved,
@@ -31,6 +30,7 @@ from yt_subs.shared.models import (
     VideoId,
     YtdlpVideoInfo,
 )
+from tests.fixtures import MOCK_VIDEO_INFO_OK
 
 URL = "https://www.youtube.com/watch?v=abc123"
 VTT_URL = "https://example.com/en.vtt"
@@ -104,12 +104,12 @@ def test_normalize_cookiefile_accepts_an_existing_file(tmp_path):
 
 
 def test_normalize_cookiefile_rejects_missing_path(tmp_path):
-    with pytest.raises(YtSubsValueError, match="cookiefile does not exist"):
+    with pytest.raises(SalinValueError, match="cookiefile does not exist"):
         normalize_cookiefile(tmp_path / "nope.txt")
 
 
 def test_normalize_cookiefile_rejects_a_directory(tmp_path):
-    with pytest.raises(YtSubsValueError):
+    with pytest.raises(SalinValueError):
         normalize_cookiefile(tmp_path)
 
 
@@ -136,7 +136,7 @@ def test_normalize_proxy_accepts_credentials_and_defaults():
     ],
 )
 def test_normalize_proxy_rejects_bad_input(proxy):
-    with pytest.raises(YtSubsValueError, match="invalid proxy"):
+    with pytest.raises(SalinValueError, match="invalid proxy"):
         normalize_proxy(proxy)
 
 
@@ -214,7 +214,7 @@ def test_extract_info_leaves_request_options_out_when_unset(fake_ytdl):
 
 
 def test_client_request_config_is_opt_in():
-    client = YtSubs()
+    client = Salin()
 
     assert client.cookies is None
     assert client.cookiefile is None
@@ -225,7 +225,7 @@ def test_client_stores_normalized_request_config(tmp_path):
     path = tmp_path / "cookies.txt"
     path.write_text("# Netscape HTTP Cookie File\n", encoding="utf-8")
 
-    client = YtSubs(
+    client = Salin(
         cookies="firefox:work",
         cookiefile=path,
         proxy="socks5://127.0.0.1:1080",
@@ -237,12 +237,12 @@ def test_client_stores_normalized_request_config(tmp_path):
 
 
 def test_client_rejects_bad_request_config(tmp_path):
-    with pytest.raises(YtSubsValueError):
-        YtSubs(cookies="not-a-browser")
-    with pytest.raises(YtSubsValueError):
-        YtSubs(cookiefile=tmp_path / "missing.txt")
-    with pytest.raises(YtSubsValueError):
-        YtSubs(proxy="ftp://127.0.0.1:21")
+    with pytest.raises(SalinValueError):
+        Salin(cookies="not-a-browser")
+    with pytest.raises(SalinValueError):
+        Salin(cookiefile=tmp_path / "missing.txt")
+    with pytest.raises(SalinValueError):
+        Salin(proxy="ftp://127.0.0.1:21")
 
 
 def test_client_inspect_threads_request_config_to_extract(monkeypatch, tmp_path):
@@ -252,12 +252,12 @@ def test_client_inspect_threads_request_config_to_extract(monkeypatch, tmp_path)
         calls.append(kwargs)
         return MOCK_VIDEO_INFO_OK
 
-    monkeypatch.setattr("yt_subs.client.extract_info", fake_extract)
+    monkeypatch.setattr("salin.client.extract_info", fake_extract)
 
     cookiefile = tmp_path / "cookies.txt"
     cookiefile.write_text("# Netscape HTTP Cookie File\n", encoding="utf-8")
 
-    client = YtSubs(
+    client = Salin(
         languages="en",
         cookies="chrome",
         cookiefile=cookiefile,
@@ -281,9 +281,9 @@ def test_per_call_request_config_overrides_the_client(monkeypatch):
         calls.append(kwargs)
         return MOCK_VIDEO_INFO_OK
 
-    monkeypatch.setattr("yt_subs.client.extract_info", fake_extract)
+    monkeypatch.setattr("salin.client.extract_info", fake_extract)
 
-    client = YtSubs(languages="en", cookies="chrome", proxy="http://a:1")
+    client = Salin(languages="en", cookies="chrome", proxy="http://a:1")
     client.inspect(URL, cookies="firefox", proxy="http://b:2")
 
     assert calls[0]["cookies"] == ("firefox", None, None, None)
@@ -297,15 +297,15 @@ def test_client_download_threads_request_config_to_downloader(monkeypatch, tmp_p
         captured.update(kwargs)
         return ()
 
-    monkeypatch.setattr("yt_subs.client.download_subtitles", fake_download_subtitles)
+    monkeypatch.setattr("salin.client.download_subtitles", fake_download_subtitles)
     monkeypatch.setattr(
-        "yt_subs.client.extract_info", lambda url, **kwargs: MOCK_VIDEO_INFO_OK
+        "salin.client.extract_info", lambda url, **kwargs: MOCK_VIDEO_INFO_OK
     )
 
     cookiefile = tmp_path / "cookies.txt"
     cookiefile.write_text("# Netscape HTTP Cookie File\n", encoding="utf-8")
 
-    YtSubs(
+    Salin(
         languages="en",
         output_dir=tmp_path,
         cookies="chrome",
@@ -325,12 +325,12 @@ def test_download_many_forwards_request_overrides(monkeypatch, tmp_path):
         seen.append(kwargs["proxy"])
         return ()
 
-    monkeypatch.setattr("yt_subs.client.download_subtitles", fake_download_subtitles)
+    monkeypatch.setattr("salin.client.download_subtitles", fake_download_subtitles)
     monkeypatch.setattr(
-        "yt_subs.client.extract_info", lambda url, **kwargs: MOCK_VIDEO_INFO_OK
+        "salin.client.extract_info", lambda url, **kwargs: MOCK_VIDEO_INFO_OK
     )
 
-    client = YtSubs(languages="en", output_dir=tmp_path)
+    client = Salin(languages="en", output_dir=tmp_path)
     list(
         client.download_many(
             ["https://x.test/a", "https://x.test/b"],
@@ -358,10 +358,10 @@ def test_fetch_threads_proxy_to_the_cue_fetcher(monkeypatch):
             subtitle_format=SubtitleFormat.JSON3,
         )
 
-    monkeypatch.setattr("yt_subs.client.extract_info", fake_extract)
-    monkeypatch.setattr("yt_subs.client.fetch_transcript_cues", fake_fetch_cues)
+    monkeypatch.setattr("salin.client.extract_info", fake_extract)
+    monkeypatch.setattr("salin.client.fetch_transcript_cues", fake_fetch_cues)
 
-    YtSubs(languages="en", proxy="http://127.0.0.1:8080").fetch(URL)
+    Salin(languages="en", proxy="http://127.0.0.1:8080").fetch(URL)
 
     assert extract_calls[0]["proxy"] == "http://127.0.0.1:8080"
     assert fetch_calls[0]["proxy"] == "http://127.0.0.1:8080"
@@ -539,7 +539,7 @@ def test_fetch_rejects_a_non_http_proxy_before_extracting(monkeypatch):
     def boom(url, **kwargs):  # pragma: no cover - must never run
         raise AssertionError("extract_info must not run for an unusable proxy")
 
-    monkeypatch.setattr("yt_subs.client.extract_info", boom)
+    monkeypatch.setattr("salin.client.extract_info", boom)
 
-    with pytest.raises(YtSubsValueError, match="http:// proxies"):
-        YtSubs(languages="en", proxy="socks5://127.0.0.1:1080").fetch("abc123")
+    with pytest.raises(SalinValueError, match="http:// proxies"):
+        Salin(languages="en", proxy="socks5://127.0.0.1:1080").fetch("abc123")

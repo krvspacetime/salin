@@ -3,7 +3,7 @@ core/fetcher.py
 
 Fetch caption cues in memory, with no temp file and no yt-dlp download.
 
-This backs ``YtSubs.fetch()``. It reuses the same track lookup and byte
+This backs ``Salin.fetch()``. It reuses the same track lookup and byte
 validation as the file-writing downloader, then parses the payload straight
 into cues.
 """
@@ -13,15 +13,15 @@ from __future__ import annotations
 from dataclasses import dataclass
 from urllib.error import HTTPError, URLError
 
-from yt_subs.cleaner.parsers import SOURCE_PARSERS, ParsedCue
-from yt_subs.core.downloader import fetch_subtitle_bytes, find_track
-from yt_subs.core.ytdlp_opts import require_direct_fetch_proxy
-from yt_subs.error import (
+from salin.cleaner.parsers import SOURCE_PARSERS, ParsedCue
+from salin.core.downloader import fetch_subtitle_bytes, find_track
+from salin.core.ytdlp_opts import require_direct_fetch_proxy
+from salin.error import (
     RateLimitedError,
     SubtitleDownloadError,
     TranscriptUnavailableError,
 )
-from yt_subs.shared.models import (
+from salin.shared.models import (
     LangCodeResolved,
     SubtitleFormat,
     SubtitleSource,

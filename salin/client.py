@@ -4,31 +4,31 @@ from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from pathlib import Path
 from typing import Unpack
 
-from yt_subs.core import (
+from salin.core import (
     download_subtitles,
     extract_info,
     fetch_transcript_cues,
     inspect_subtitle_availability,
     inspect_subtitles,
 )
-from yt_subs.core.resolver import resolve_availability, resolve_subtitles
-from yt_subs.core.ytdlp_opts import (
+from salin.core.resolver import resolve_availability, resolve_subtitles
+from salin.core.ytdlp_opts import (
     normalize_cookiefile,
     normalize_cookies,
     normalize_proxy,
     require_direct_fetch_proxy,
 )
-from yt_subs.error import (
+from salin.error import (
     ExtractorError,
     LanguageParseError,
     RateLimitedError,
+    SalinError,
+    SalinValueError,
     SubtitleDownloadError,
     TranscriptUnavailableError,
-    YtSubsError,
-    YtSubsValueError,
 )
-from yt_subs.languages import LanguagesInput, LanguageSpec, parse_languages
-from yt_subs.shared.models import (
+from salin.languages import LanguagesInput, LanguageSpec, parse_languages
+from salin.shared.models import (
     BrowserCookies,
     DownloadOverrides,
     DownloadStatus,
@@ -44,13 +44,13 @@ from yt_subs.shared.models import (
     VideoId,
     YtdlpVideoInfo,
 )
-from yt_subs.transcript import FetchedTranscript, TranscriptSnippet
-from yt_subs.urls import to_video_url
+from salin.transcript import FetchedTranscript, TranscriptSnippet
+from salin.urls import to_video_url
 
 log = logging.getLogger(__name__)
 
 
-class YtSubs:
+class Salin:
     __slots__ = (
         "languages",
         "output_dir",
@@ -143,7 +143,7 @@ class YtSubs:
 
     def _valid_output_dir(self, output_dir: Path | str | None) -> Path:
         if output_dir is None:
-            return Path("yt_subs_downloads")
+            return Path("salin_downloads")
         if not isinstance(output_dir, Path):
             return Path(output_dir)
         return output_dir
@@ -158,7 +158,7 @@ class YtSubs:
             try:
                 return SubtitleFormat(subtitle_format)
             except ValueError as exc:
-                raise YtSubsValueError(
+                raise SalinValueError(
                     f"unsupported subtitle_format: {subtitle_format!r}. "
                     f"Supported formats are: "
                     f"{', '.join(f.value for f in SubtitleFormat)}."
@@ -193,7 +193,7 @@ class YtSubs:
             try:
                 return LanguageMatch(language_match)
             except ValueError as exc:
-                raise YtSubsValueError(
+                raise SalinValueError(
                     f"unsupported language_match: {language_match!r}. "
                     f"Supported values are: "
                     f"{', '.join(f.value for f in LanguageMatch)}."
@@ -209,7 +209,7 @@ class YtSubs:
             try:
                 return SubtitleSourcePolicy(source_policy)
             except ValueError as exc:
-                raise YtSubsValueError(
+                raise SalinValueError(
                     f"unsupported source_policy: {source_policy!r}. "
                     f"Supported values are: "
                     f"{', '.join(f.value for f in SubtitleSourcePolicy)}."
@@ -230,7 +230,7 @@ class YtSubs:
             if self.languages is None:
                 raise LanguageParseError(
                     "No languages specified. You must provide languages in either "
-                    "the YtSubs constructor or as an override."
+                    "the Salin constructor or as an override."
                 )
             return self.languages
         return parse_languages(languages)
@@ -240,21 +240,21 @@ class YtSubs:
             return None
 
         if not isinstance(info, dict):
-            raise YtSubsValueError(
+            raise SalinValueError(
                 "info must be a dict of the shape returned by extract_info()"
             )
         if not isinstance(info.get("id"), str) or not info["id"]:
-            raise YtSubsValueError(
+            raise SalinValueError(
                 "info is missing a usable 'id'; pass a dict from extract_info()"
             )
         if not info.get("extractor"):
-            raise YtSubsValueError(
+            raise SalinValueError(
                 "info is missing the 'extractor' key that yt-dlp records; pass a "
                 "dict from extract_info() rather than a hand-built one"
             )
         if info.get("_type") in ("playlist", "url_transparent"):
-            raise YtSubsValueError(
-                f"info is a {info['_type']!r} result; yt-subs downloads single "
+            raise SalinValueError(
+                f"info is a {info['_type']!r} result; Salin downloads single "
                 "videos only"
             )
         return info
@@ -344,19 +344,19 @@ class YtSubs:
         code written against ``youtube_transcript_api`` mostly just changes the
         import::
 
-            from yt_subs import YtSubs
+            from salin import Salin
 
-            transcript = YtSubs(languages="en").fetch("dQw4w9WgXcQ")
+            transcript = Salin(languages="en").fetch("dQw4w9WgXcQ")
             for snippet in transcript:
                 print(snippet.start, snippet.text)
             transcript.to_raw_data()
 
-        Raises :class:`~yt_subs.error.TranscriptUnavailableError` when none of
+        Raises :class:`~salin.error.TranscriptUnavailableError` when none of
         the requested languages resolve to a fetchable track.
         """
         if preserve_formatting:
-            raise YtSubsValueError(
-                "preserve_formatting=True is not supported: yt-subs returns "
+            raise SalinValueError(
+                "preserve_formatting=True is not supported: Salin returns "
                 "plain text snippets with inline markup stripped."
             )
 
@@ -672,7 +672,7 @@ class YtSubs:
             for url in urls:
                 try:
                     result = self.download(url, **overrides)
-                except (ExtractorError, YtSubsError, OSError) as exc:
+                except (ExtractorError, SalinError, OSError) as exc:
                     result = failed_result(url, exc)
                 yield result
                 if tripped(result):
@@ -699,7 +699,7 @@ class YtSubs:
                     url = future_to_url.pop(future)
                     try:
                         result = future.result()
-                    except (ExtractorError, YtSubsError, OSError) as exc:
+                    except (ExtractorError, SalinError, OSError) as exc:
                         result = failed_result(url, exc)
                     yield result
                     if tripped(result):

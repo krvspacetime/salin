@@ -7,10 +7,10 @@ from collections.abc import Iterable
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-from yt_subs.cleaner.dedup import deduplicate_blocks
-from yt_subs.cleaner.normalize import normalize_caption_text
-from yt_subs.cleaner.parsers import read_cues
-from yt_subs.shared.models import SubtitleFile, SubtitleFormat, SubtitleResult
+from salin.cleaner.dedup import deduplicate_blocks
+from salin.cleaner.normalize import normalize_caption_text
+from salin.cleaner.parsers import read_cues
+from salin.shared.models import SubtitleFile, SubtitleFormat, SubtitleResult
 
 log = logging.getLogger(__name__)
 

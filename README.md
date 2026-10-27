@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="assets/logo.svg" width="96" height="96" alt="SubtitleKit logo">
+  <img src="assets/logo.svg" width="96" height="96" alt="Salin logo">
 </p>
 
-<h1 align="center">SubtitleKit</h1>
+<h1 align="center">Salin</h1>
 
 <p align="center">
   Inspect, resolve, download, and clean YouTube subtitle tracks from Python.
@@ -14,13 +14,13 @@
   <a href="https://github.com/krvspacetime/yt-subs/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/krvspacetime/yt-subs/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="Lint: ruff" src="https://img.shields.io/badge/lint-ruff-261230.svg">
   <img alt="Types: mypy-style, checked with ty" src="https://img.shields.io/badge/types-ty-ffd43b.svg">
-  <a href="https://pypi.org/project/subtitlekit/"><img alt="PyPI" src="https://img.shields.io/badge/pypi-soon-lightgrey.svg"></a>
+  <a href="https://pypi.org/project/salin/"><img alt="PyPI" src="https://img.shields.io/badge/pypi-soon-lightgrey.svg"></a>
   <a href="https://github.com/sponsors/krvspacetime"><img alt="Sponsor" src="https://img.shields.io/badge/sponsor-%E2%9D%A4-ff69b4.svg"></a>
 </p>
 
 ---
 
-SubtitleKit is a typed Python library for working with YouTube subtitle tracks. It
+Salin is a typed Python library for working with YouTube subtitle tracks. It
 inspects which tracks and formats a video has, resolves requested languages
 against language-match and source policies, downloads the captions (to disk or
 straight into memory as snippets), and cleans rolling auto-caption noise into
@@ -37,18 +37,18 @@ It is also easy to break: it talks to YouTube's private player API, so when
 YouTube blocks your IP the library stops working entirely, and a burst of
 requests can get you a shared `429` with no clear signal.
 
-SubtitleKit uses yt-dlp's extraction, which is more resilient and keeps
+Salin uses yt-dlp's extraction, which is more resilient and keeps
 **inspecting and resolving** subtitle availability even when the caption
 endpoint is throttling. It also treats rate limits as a first-class result
 rather than a silent retry: you get `RateLimitedError` / `DownloadStatus.RATE_LIMITED`
 with the parsed `Retry-After`, and a bulk run can stop cleanly instead of
 hammering an endpoint that is already refusing it. Honest about the one limit it
 shares with everyone: caption *bytes* come from the same `timedtext` endpoint, so
-SubtitleKit can be rate-limited too — it just tells you instead of hiding it.
+Salin can be rate-limited too — it just tells you instead of hiding it.
 
 ## How it compares
 
-| | youtube-transcript-api | SubtitleKit |
+| | youtube-transcript-api | Salin |
 |---|---|---|
 | Snippets in memory | yes | yes (`fetch()`) |
 | Subtitle files on disk | no | yes (7 formats) |
@@ -71,25 +71,21 @@ Prebuilt packages are coming to PyPI. Until then, install from git:
 uv add git+https://github.com/krvspacetime/yt-subs.git
 ```
 
-> **Naming:** the distribution and project are **SubtitleKit**, but the import
-> package is still `yt_subs` and the client is still `YtSubs` while the code
-> rename is in progress. Only the dist name and the docs have changed.
-
 ## Quick start
 
 ```python
-from yt_subs import YtSubs
+from salin import Salin
 
-client = YtSubs(languages="en")
+client = Salin(languages="en")
 result = client.download("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
-# Subtitles are saved to ./yt_subs_downloads unless you set output_dir on the
+# Subtitles are saved to ./salin_downloads unless you set output_dir on the
 # client or on download()/download_many().
 ```
 
 Prefer snippets in memory? Use `fetch()`:
 
 ```python
-transcript = YtSubs(languages="en").fetch("dQw4w9WgXcQ")
+transcript = Salin(languages="en").fetch("dQw4w9WgXcQ")
 for snippet in transcript:
     print(snippet.start, snippet.text)
 ```
@@ -99,7 +95,7 @@ for snippet in transcript:
 Pick a format:
 
 ```python
-client = YtSubs()
+client = Salin()
 result = client.download(
     "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
     subtitle_format="vtt",
@@ -109,7 +105,7 @@ result = client.download(
 Download several languages in one call:
 
 ```python
-client = YtSubs(languages=["en", "de"])
+client = Salin(languages=["en", "de"])
 result = client.download("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
 print(result)
 ```
@@ -125,7 +121,7 @@ SubtitleResult(
             resolved='en',
             source=<SubtitleSource.MANUAL: 'manual'>,
             status=<DownloadStatus.OK: 'ok'>,
-            sub_path=WindowsPath('yt_subs_downloads/dQw4w9WgXcQ.en.vtt'),
+            sub_path=WindowsPath('salin_downloads/dQw4w9WgXcQ.en.vtt'),
             format=<SubtitleFormat.VTT: 'vtt'>,
             error=None),
         SubtitleFile(
@@ -133,7 +129,7 @@ SubtitleResult(
             resolved='de-DE',
             source=<SubtitleSource.MANUAL: 'manual'>,
             status=<DownloadStatus.OK: 'ok'>,
-            sub_path=WindowsPath('yt_subs_downloads/dQw4w9WgXcQ.de-DE.vtt'),
+            sub_path=WindowsPath('salin_downloads/dQw4w9WgXcQ.de-DE.vtt'),
             format=<SubtitleFormat.VTT: 'vtt'>,
             error=None)))
 ```
@@ -148,7 +144,7 @@ impersonation, e.g. `curl_cffi` for Dailymotion).
 Verified end to end: **Dailymotion**, which offered only `srt` in our sample:
 
 ```python
-client = YtSubs(languages="en", subtitle_format="srt")
+client = Salin(languages="en", subtitle_format="srt")
 result = client.download("https://www.dailymotion.com/video/x7tgad0")
 ```
 
@@ -162,9 +158,9 @@ see which formats are actually available.
 directly, writes no file, and does not download the video.
 
 ```python
-from yt_subs import YtSubs
+from salin import Salin
 
-transcript = YtSubs(languages="en").fetch("dQw4w9WgXcQ")
+transcript = Salin(languages="en").fetch("dQw4w9WgXcQ")
 len(transcript)                      # number of snippets
 transcript.video_id                  # 'dQw4w9WgXcQ'
 transcript.language                  # 'English' (YouTube's name for the track)
@@ -188,26 +184,26 @@ fetches the `json3` track when one exists (falling back to `srv3`, `srv1`,
 ```diff
 - from youtube_transcript_api import YouTubeTranscriptApi
 - transcript = YouTubeTranscriptApi().fetch(video_id, languages=("en",))
-+ from yt_subs import YtSubs
-+ transcript = YtSubs(languages="en").fetch(video_id)
++ from salin import Salin
++ transcript = Salin(languages="en").fetch(video_id)
 ```
 
 The returned objects mirror yta's:
 
 ```python
-from yt_subs import FetchedTranscript, TranscriptSnippet
+from salin import FetchedTranscript, TranscriptSnippet
 ```
 
 Differences to know about:
 
-- `fetch()` takes the language list in the `YtSubs(...)` constructor (or a
+- `fetch()` takes the language list in the `Salin(...)` constructor (or a
   `languages=` override), not as a positional argument.
 - Snippets are **normalized**: inline markup, speaker chevrons (`>>`), and
   stage directions such as `[Music]` are stripped, and whitespace is
   collapsed. `youtube-transcript-api` only strips HTML tags, so text can
   differ slightly for captions that contain those markers.
-- `preserve_formatting=True` is not supported and raises `YtSubsValueError`.
-- Failures raise SubtitleKit errors: `TranscriptUnavailableError` when no
+- `preserve_formatting=True` is not supported and raises `SalinValueError`.
+- Failures raise Salin errors: `TranscriptUnavailableError` when no
   requested language resolves, and `SubtitleDownloadError` when the caption
   request itself fails.
 - A `429` raises `RateLimitedError` (a `SubtitleDownloadError` subclass) with
@@ -219,7 +215,7 @@ Differences to know about:
 each one offers.
 
 ```python
-client = YtSubs()
+client = Salin()
 availability = client.inspect(url)
 print(availability)
 ```
@@ -241,7 +237,7 @@ SubtitleAvailability(
 `language_match`, `source_policy`, and per-language alias list.
 
 ```python
-client = YtSubs()
+client = Salin()
 result = client.resolve(
     url,
     language_match="exact",          # LanguageMatch.EXACT
@@ -329,16 +325,16 @@ multiple hours to capture the same level of mistake because it requires like
 Write the cleaned text next to (or into) a directory:
 
 ```python
-from yt_subs import YtSubs, clean_transcript
+from salin import Salin, clean_transcript
 
-result = YtSubs(languages="en", subtitle_format="vtt").download(url)
+result = Salin(languages="en", subtitle_format="vtt").download(url)
 paths = clean_transcript(result, output_dir="transcripts")
 ```
 
 Or get it without touching the filesystem:
 
 ```python
-from yt_subs import clean_cues
+from salin import clean_cues
 
 subtitle = result.ok_subs[0]
 text = clean_cues(subtitle.sub_path, subtitle.format)
@@ -366,7 +362,7 @@ can be set (default `1`).
 > order is not preserved unless `max_workers=1`.
 
 ```python
-client = YtSubs()
+client = Salin()
 
 for result in client.download_many(urls, languages="en", max_workers=3):
     if not result.processable:
@@ -398,7 +394,7 @@ than raising it.
 ## Benchmarks
 
 One residential IP, Windows, `yt-dlp 2026.07.04`, `youtube-transcript-api 1.2.4`,
-`SubtitleKit 0.1.0`, 2026-10-27/28, `en` only, sequential, no artificial delay.
+`Salin 0.1.0`, 2026-10-27/28, `en` only, sequential, no artificial delay.
 Two samples from the same Postgres table: 480 videos where `captions_available =
 true`, and 1,000 videos sampled uniformly from all 9,776 rows. Both were
 shuffled with a fixed seed. Times are local and the machine was in normal use,
@@ -410,7 +406,7 @@ reliable.
 | run | attempted | succeeded | first block | wall | throughput | p50 latency |
 |---|---:|---:|---|---:|---:|---:|
 | `youtube-transcript-api` | 60 | 55 | #56, ~99s | 105s | 34.4/min | 1.22s |
-| SubtitleKit | 480 | 479 | none | 31.9 min | 15.0/min | 3.25s |
+| Salin | 480 | 479 | none | 31.9 min | 15.0/min | 3.25s |
 
 `youtube-transcript-api` made 55 consecutive requests at ~1.2s each, then hit
 `IpBlocked` and failed every request after that. An earlier run blocked at #89
@@ -418,7 +414,7 @@ after ~103s, so the stable number is the wall time, not the video count:
 `youtube-transcript-api` is good for roughly **100 seconds** of sequential
 requests.
 
-SubtitleKit then ran 479 of 480 in one continuous 31.9-minute session with
+Salin then ran 479 of 480 in one continuous 31.9-minute session with
 **zero blocks**; the one failure was a genuinely unavailable video, so its
 success rate on usable videos is 100%. A further 1,000-video random sample ran
 88 more minutes on the same IP, also with zero blocks (see below).
@@ -427,11 +423,11 @@ success rate on usable videos is 100%. A further 1,000-video random sample ran
 
 Caption bytes come from the same `youtube.com/api/timedtext` endpoint whichever
 library asks. Running `youtube-transcript-api` first poisoned the next
-SubtitleKit run: yt-dlp still extracted `id`, `title`, and the full caption
+Salin run: yt-dlp still extracted `id`, `title`, and the full caption
 track list, but every caption fetch returned `HTTP 429`. So the useful claim is
 narrower than "yt-dlp doesn't get blocked":
 
-- SubtitleKit keeps **inspecting and resolving** while `youtube-transcript-api`
+- Salin keeps **inspecting and resolving** while `youtube-transcript-api`
   is blocked.
 - Caption bytes are rate-limited separately, and a burst from either library
   spends the same budget.
@@ -455,14 +451,14 @@ not.
 
 ### Content parity
 
-| metric | youtube-transcript-api | SubtitleKit |
+| metric | youtube-transcript-api | Salin |
 |---|---:|---:|
 | raw characters (median) | 7032 | 7032 |
 | snippets (median) | 116 | 116 |
 | latency (mean) | 1.22s | 3.86s |
 
 Measured on the 55 videos both libraries handled; the median ratio was exactly
-1.000 and no video diverged by more than one character. SubtitleKit is ~3x
+1.000 and no video diverged by more than one character. Salin is ~3x
 slower per video because it pays a full yt-dlp extraction — the price of
 surviving the watch-page block.
 
@@ -480,9 +476,9 @@ videos uniformly (only 50 of them marked captioned) and processed every one:
 | video unavailable | 1 | 0.1% |
 
 **Zero blocks over 88 minutes.** Every one of the 101 misses was checked: none
-had a native English track that SubtitleKit failed to fetch. 96 have no captions
+had a native English track that Salin failed to fetch. 96 have no captions
 at all; the 5 are non-English videos whose only `en` track is a machine
-translation, which SubtitleKit skips by default rather than silently returning
+translation, which Salin skips by default rather than silently returning
 translated text.
 
 That is also a warning about `captions_available`-style filters: 898 of the
@@ -517,11 +513,11 @@ though the two runs used different IPs, so it is not a controlled comparison.
 
 ## Throttling and rate limits
 
-SubtitleKit adds no artificial delay by default: `sleep_interval_subtitles`
+Salin adds no artificial delay by default: `sleep_interval_subtitles`
 defaults to `0`. Raise it when request volume, not latency, is the bottleneck:
 
 ```python
-client = YtSubs(languages=["en", "de", "ja", "pt-BR"], sleep_interval_subtitles=2)
+client = Salin(languages=["en", "de", "ja", "pt-BR"], sleep_interval_subtitles=2)
 ```
 
 Each extra language then costs `(languages - 1) x interval` seconds per video.
@@ -532,7 +528,7 @@ performs the download itself.
 
 YouTube enforces a shared limit on the `timedtext` caption endpoint that is
 independent of yt-dlp's page requests. When it trips, the request comes back
-`HTTP 429`, and SubtitleKit records it as a distinct status instead of a generic
+`HTTP 429`, and Salin records it as a distinct status instead of a generic
 error:
 
 ```python
@@ -556,7 +552,7 @@ if result.is_rate_limited:
 Pass `strict=True` to raise instead of returning a partial result:
 
 ```python
-from yt_subs import RateLimitedError
+from salin import RateLimitedError
 
 try:
     client.download(url, strict=True)
@@ -584,7 +580,7 @@ Some videos only expose subtitles to signed-in, region-locked, or differently
 routed clients. Pass the settings at the client level or per call:
 
 ```python
-client = YtSubs(
+client = Salin(
     languages="en",
     cookies="firefox:myprofile",        # read from a browser
     # cookiefile="~/cookies.txt",       # or a Netscape cookies.txt you control
@@ -599,7 +595,7 @@ result = client.download(url, cookies="chrome", proxy="http://127.0.0.1:8080")
 `"chrome"`, `"firefox"`, `"firefox+gnomekeyring"`, `"chromium::Container 1"`.
 `cookiefile` must be an existing Netscape-format `cookies.txt`. `proxy` accepts
 `http`, `https`, `socks4`, `socks4a`, `socks5`, and `socks5h` URLs. Invalid
-values raise `YtSubsValueError` before any request is made.
+values raise `SalinValueError` before any request is made.
 
 The same settings are used for metadata extraction, the direct caption fetch,
 the yt-dlp fallback, `fetch()`, and the re-extraction that happens when a
@@ -607,7 +603,7 @@ signed track URL expires. `inspect()` and `resolve()` accept them too.
 
 One limitation: `fetch()` reads caption bytes directly with `urllib`, so it
 supports only `http://` proxies (the common CONNECT form). With an `https://`,
-`socks4`, or `socks5` proxy, `fetch()` raises `YtSubsValueError` and points you
+`socks4`, or `socks5` proxy, `fetch()` raises `SalinValueError` and points you
 at `download()`, which hands the fetch to yt-dlp and supports every scheme.
 
 > **Security note:** enabling `cookies` reads from that browser's cookie store
@@ -625,7 +621,7 @@ at `download()`, which hands the fetch to yt-dlp and supports every scheme.
   thread and per request-config, so back-to-back calls reuse the connection and
   skip the ~0.3s client setup. A repeated extract drops from ~3.0s to ~1.2–1.6s
   in our measurements.
-- **Bounded retries.** `yt-dlp`'s defaults are patient; SubtitleKit caps
+- **Bounded retries.** `yt-dlp`'s defaults are patient; Salin caps
   `retries`, `extractor_retries`, and `socket_timeout` so a stuck request
   fails fast instead of stalling a batch.
 

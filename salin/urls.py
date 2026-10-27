@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from yt_subs.shared.models import UrlStr
+from salin.shared.models import UrlStr
 
 _VIDEO_ID_RE = re.compile(r"[A-Za-z0-9_-]{11}")
 

@@ -1,16 +1,16 @@
-class YtSubsError(Exception):
-    """Base exception for all yt-subs errors."""
+class SalinError(Exception):
+    """Base exception for all Salin errors."""
 
 
-class YtSubsValueError(YtSubsError, ValueError):
+class SalinValueError(SalinError, ValueError):
     """Raised when invalid arguments are provided."""
 
 
-class LanguageParseError(YtSubsValueError):
+class LanguageParseError(SalinValueError):
     """Raised when language input cannot be parsed or validated."""
 
 
-class ExtractorError(YtSubsError):
+class ExtractorError(SalinError):
     """Base exception for metadata extraction failures."""
 
 
@@ -22,7 +22,7 @@ class ChannelUnavailableError(ExtractorError):
     """Raised when a channel or playlist is unavailable or not found."""
 
 
-class SubtitleDownloadError(YtSubsError):
+class SubtitleDownloadError(SalinError):
     """Raised when downloading subtitles fails."""
 
 
@@ -46,13 +46,13 @@ class RateLimitedError(SubtitleDownloadError):
         self.video_id = video_id
 
 
-class TranscriptUnavailableError(YtSubsError):
-    """Raised by YtSubs.fetch() when no requested transcript track is available."""
+class TranscriptUnavailableError(SalinError):
+    """Raised by Salin.fetch() when no requested transcript track is available."""
 
     def __init__(self, video_id: str, message: str):
         super().__init__(message)
         self.video_id = video_id
 
 
-class UnsupportedFormatError(YtSubsError, NotImplementedError):
+class UnsupportedFormatError(SalinError, NotImplementedError):
     """Raised when a subtitle format has no parser for the requested operation."""

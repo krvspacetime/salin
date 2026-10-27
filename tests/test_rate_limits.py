@@ -8,16 +8,15 @@ from urllib.error import HTTPError, URLError
 
 import pytest
 
-from tests.fixtures import MOCK_VIDEO_INFO_OK
-from yt_subs import RateLimitedError, YtSubs
-from yt_subs.core import downloader
-from yt_subs.core.downloader import (
+from salin import RateLimitedError, Salin
+from salin.core import downloader
+from salin.core.downloader import (
     download_subtitles,
     looks_rate_limited,
     parse_retry_after,
 )
-from yt_subs.error import SubtitleDownloadError
-from yt_subs.shared.models import (
+from salin.error import SubtitleDownloadError
+from salin.shared.models import (
     DownloadStatus,
     LangCodeRequested,
     LangCodeResolved,
@@ -29,6 +28,7 @@ from yt_subs.shared.models import (
     VideoId,
     YtdlpVideoInfo,
 )
+from tests.fixtures import MOCK_VIDEO_INFO_OK
 
 VTT_URL = "https://example.com/en.vtt"
 VTT_BODY = b"WEBVTT\n\n00:00:01.000 --> 00:00:03.000\nhi\n"
@@ -105,7 +105,7 @@ def test_429_is_not_handed_to_ytdlp(monkeypatch, tmp_path):
     fallback_calls = []
 
     monkeypatch.setattr(
-        "yt_subs.core.downloader._download_subtitles_ytdlp",
+        "salin.core.downloader._download_subtitles_ytdlp",
         lambda *a, **k: fallback_calls.append(k),
     )
     monkeypatch.setattr(
@@ -303,13 +303,13 @@ def _rate_limited_file(retry_after: int | None = 30) -> SubtitleFile:
 
 def test_result_properties_aggregate_rate_limits(monkeypatch, tmp_path):
     monkeypatch.setattr(
-        "yt_subs.client.extract_info", lambda url, **kw: MOCK_VIDEO_INFO_OK
+        "salin.client.extract_info", lambda url, **kw: MOCK_VIDEO_INFO_OK
     )
     monkeypatch.setattr(
-        "yt_subs.client.download_subtitles", lambda *a, **k: (_rate_limited_file(45),)
+        "salin.client.download_subtitles", lambda *a, **k: (_rate_limited_file(45),)
     )
 
-    result = YtSubs(languages="en", output_dir=tmp_path).download(
+    result = Salin(languages="en", output_dir=tmp_path).download(
         "https://www.youtube.com/watch?v=abc123"
     )
 
@@ -324,13 +324,13 @@ def test_result_properties_aggregate_rate_limits(monkeypatch, tmp_path):
 
 def test_strict_download_raises_rate_limited(monkeypatch, tmp_path):
     monkeypatch.setattr(
-        "yt_subs.client.extract_info", lambda url, **kw: MOCK_VIDEO_INFO_OK
+        "salin.client.extract_info", lambda url, **kw: MOCK_VIDEO_INFO_OK
     )
     monkeypatch.setattr(
-        "yt_subs.client.download_subtitles", lambda *a, **k: (_rate_limited_file(30),)
+        "salin.client.download_subtitles", lambda *a, **k: (_rate_limited_file(30),)
     )
 
-    client = YtSubs(languages="en", output_dir=tmp_path)
+    client = Salin(languages="en", output_dir=tmp_path)
     with pytest.raises(RateLimitedError) as excinfo:
         client.download("https://www.youtube.com/watch?v=abc123", strict=True)
 
@@ -346,24 +346,24 @@ def test_strict_download_raises_for_missing(monkeypatch, tmp_path):
         status=DownloadStatus.MISSING,
     )
     monkeypatch.setattr(
-        "yt_subs.client.extract_info", lambda url, **kw: MOCK_VIDEO_INFO_OK
+        "salin.client.extract_info", lambda url, **kw: MOCK_VIDEO_INFO_OK
     )
-    monkeypatch.setattr("yt_subs.client.download_subtitles", lambda *a, **k: (missing,))
+    monkeypatch.setattr("salin.client.download_subtitles", lambda *a, **k: (missing,))
 
-    client = YtSubs(languages="en", output_dir=tmp_path)
+    client = Salin(languages="en", output_dir=tmp_path)
     with pytest.raises(SubtitleDownloadError):
         client.download("https://www.youtube.com/watch?v=abc123", strict=True)
 
 
 def test_non_strict_download_returns_rate_limited_result(monkeypatch, tmp_path):
     monkeypatch.setattr(
-        "yt_subs.client.extract_info", lambda url, **kw: MOCK_VIDEO_INFO_OK
+        "salin.client.extract_info", lambda url, **kw: MOCK_VIDEO_INFO_OK
     )
     monkeypatch.setattr(
-        "yt_subs.client.download_subtitles", lambda *a, **k: (_rate_limited_file(),)
+        "salin.client.download_subtitles", lambda *a, **k: (_rate_limited_file(),)
     )
 
-    result = YtSubs(languages="en", output_dir=tmp_path).download(
+    result = Salin(languages="en", output_dir=tmp_path).download(
         "https://www.youtube.com/watch?v=abc123"
     )
     assert result.subtitles[0].status == DownloadStatus.RATE_LIMITED
@@ -372,11 +372,11 @@ def test_non_strict_download_returns_rate_limited_result(monkeypatch, tmp_path):
 def _patch_rate_limited_downloads(monkeypatch):
     """Every video resolves, and every caption fetch is rate-limited."""
     monkeypatch.setattr(
-        "yt_subs.client.extract_info",
+        "salin.client.extract_info",
         lambda url, **kw: {**MOCK_VIDEO_INFO_OK, "id": url.rsplit("/", 1)[-1]},
     )
     monkeypatch.setattr(
-        "yt_subs.client.download_subtitles", lambda *a, **k: (_rate_limited_file(),)
+        "salin.client.download_subtitles", lambda *a, **k: (_rate_limited_file(),)
     )
 
 
@@ -385,7 +385,7 @@ def test_download_many_stops_after_consecutive_rate_limits(monkeypatch):
 
     urls = [f"https://x.test/v{i}" for i in range(10)]
     results = list(
-        YtSubs(languages="en").download_many(urls, max_consecutive_rate_limits=3)
+        Salin(languages="en").download_many(urls, max_consecutive_rate_limits=3)
     )
 
     assert len(results) == 3
@@ -394,7 +394,7 @@ def test_download_many_stops_after_consecutive_rate_limits(monkeypatch):
 
 def test_download_many_resets_the_counter_on_success(monkeypatch, tmp_path):
     monkeypatch.setattr(
-        "yt_subs.client.extract_info",
+        "salin.client.extract_info",
         lambda url, **kw: {**MOCK_VIDEO_INFO_OK, "id": url.rsplit("/", 1)[-1]},
     )
 
@@ -412,7 +412,7 @@ def test_download_many_resets_the_counter_on_success(monkeypatch, tmp_path):
             ),
         )
 
-    monkeypatch.setattr("yt_subs.client.download_subtitles", fake_download_subtitles)
+    monkeypatch.setattr("salin.client.download_subtitles", fake_download_subtitles)
 
     urls = [
         "https://x.test/rl1",
@@ -422,7 +422,7 @@ def test_download_many_resets_the_counter_on_success(monkeypatch, tmp_path):
         "https://x.test/rl4",
     ]
     results = list(
-        YtSubs(languages="en").download_many(urls, max_consecutive_rate_limits=2)
+        Salin(languages="en").download_many(urls, max_consecutive_rate_limits=2)
     )
 
     # rl1 (1), ok1 (reset), rl2 (1), rl3 (2 -> stop). rl4 is never fetched.
@@ -435,7 +435,7 @@ def test_download_many_breaker_sees_strict_rate_limit_errors(monkeypatch):
 
     urls = [f"https://x.test/v{i}" for i in range(6)]
     results = list(
-        YtSubs(languages="en").download_many(
+        Salin(languages="en").download_many(
             urls, max_consecutive_rate_limits=2, strict=True
         )
     )
@@ -450,11 +450,11 @@ def test_download_many_without_limit_never_stops(monkeypatch):
     _patch_rate_limited_downloads(monkeypatch)
 
     urls = [f"https://x.test/v{i}" for i in range(4)]
-    results = list(YtSubs(languages="en").download_many(urls))
+    results = list(Salin(languages="en").download_many(urls))
 
     assert len(results) == 4
 
 
 def test_download_many_rejects_bad_limit():
     with pytest.raises(ValueError):
-        list(YtSubs(languages="en").download_many([], max_consecutive_rate_limits=0))
+        list(Salin(languages="en").download_many([], max_consecutive_rate_limits=0))

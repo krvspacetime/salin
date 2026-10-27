@@ -2,18 +2,18 @@ import json
 
 import pytest
 
-from yt_subs.cleaner import clean_cues, clean_transcript
-from yt_subs.cleaner.dedup import deduplicate_blocks, sanitize_word
-from yt_subs.cleaner.normalize import normalize_caption_text
-from yt_subs.cleaner.parsers import (
+from salin.cleaner import clean_cues, clean_transcript
+from salin.cleaner.dedup import deduplicate_blocks, sanitize_word
+from salin.cleaner.normalize import normalize_caption_text
+from salin.cleaner.parsers import (
     CUE_READERS,
     SUPPORTED_FORMATS,
     parse_srt_cues,
     parse_vtt_cues,
     read_cues,
 )
-from yt_subs.error import UnsupportedFormatError, YtSubsError
-from yt_subs.shared.models import (
+from salin.error import SalinError, UnsupportedFormatError
+from salin.shared.models import (
     DownloadStatus,
     LangCodeRequested,
     LangCodeResolved,
@@ -169,7 +169,7 @@ def test_unregistered_format_raises_library_error(monkeypatch, tmp_path):
     with pytest.raises(UnsupportedFormatError) as exc:
         read_cues(path, SubtitleFormat.JSON3)
 
-    assert isinstance(exc.value, YtSubsError)
+    assert isinstance(exc.value, SalinError)
     assert isinstance(exc.value, NotImplementedError)
     assert "srt" in str(exc.value) and "vtt" in str(exc.value)
 

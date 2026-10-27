@@ -1,17 +1,17 @@
-# Competitive notes: making `yt-subs` a serious alternative to `youtube-transcript-api`
+# Competitive notes: making `Salin` a serious alternative to `youtube-transcript-api`
 
 `youtube-transcript-api` (yta) is MIT, ~8.5k stars, actively maintained
 (last push 2026-10-20). It is the default choice because it is small, returns
-in-memory snippets, and is easy to install. `yt-subs` is technically stronger
+in-memory snippets, and is easy to install. `Salin` is technically stronger
 in several places, but most of that strength is invisible to a yta user
 evaluating the README for 60 seconds.
 
 The benchmark (local `bench/RESULTS.md`, not committed) changes the positioning
-in one important way: **yt-subs is not immune to YouTube rate limits.** It
+in one important way: **Salin is not immune to YouTube rate limits.** It
 survives the watch-page block that kills yta (1,480 videos over ~2 hours with
 zero blocks, ~12–15 videos/min), but caption bytes come from the same
 `timedtext` endpoint and get 429'd too — one burst from yta took it down
-completely. The defensible claim is narrower and more useful: *yt-subs still
+completely. The defensible claim is narrower and more useful: *Salin still
 inspects and resolves when yta is blocked, and at a sustainable pace it keeps
 fetching captions long after yta has died.*
 
@@ -22,7 +22,7 @@ polish.
 
 - **#1 License → MIT**: done. `LICENSE`, `pyproject.toml`, and the built
   wheel metadata now say MIT.
-- **#3 `fetch()`**: done. `YtSubs.fetch()` returns a yta-shaped
+- **#3 `fetch()`**: done. `Salin.fetch()` returns a yta-shaped
   `FetchedTranscript` from the `json3` track, in memory, with no file write.
 - **#4 cookies / `cookiefile` / proxy**: done. `extract_info`, the direct
   caption fetch, the yt-dlp fallback, `fetch()`, and the 403 re-extract all
@@ -58,9 +58,9 @@ polish.
   recipe. Keep "every site yt-dlp does" out until more sites are proven.
 - **Benchmarks: fresh IP re-run done.** `yta` is good for ~100 seconds of
   sequential requests (blocked at #56 this time, #89 before — the wall time is
-  the stable number) before `IpBlocked`. `yt-subs` then ran 479/480 in one
+  the stable number) before `IpBlocked`. `Salin` then ran 479/480 in one
   31.9-minute session with zero blocks at ~15 videos/min. The shared `timedtext`
-  limit reproduces — one `yta` burst 429s yt-subs' caption fetches — and a
+  limit reproduces — one `yta` burst 429s Salin's caption fetches — and a
   single burst kept the endpoint closed **past 60 minutes** of polling; a fresh
   IP cleared it instantly. Content parity is exact (median ratio 1.000). The
   README has the full section; `bench/RESULTS.md` (local) has the raw runs.
@@ -89,7 +89,7 @@ anyone depends on the current license.
 ### 2. Publish to PyPI
 
 The install instructions are `uv add git+https://...`, which loses almost
-everyone who is not already committed. `yt-subs` is free on PyPI (`ytsubs`
+everyone who is not already committed. `Salin` is free on PyPI (`ytsubs`
 is taken). Add:
 
 ```toml
@@ -111,11 +111,11 @@ Issues = "https://github.com/krvspacetime/yt-subs/issues"
 Changelog = "https://github.com/krvspacetime/yt-subs/blob/main/CHANGELOG.md"
 
 [project.scripts]
-ytsubs = "yt_subs.cli:main"
+salin = "salin.cli:main"
 ```
 
 Then `uv build` + `uv publish` (or PyPI trusted publishing from GitHub
-Actions). Keep the `ytsubs` command name even if the package stays `yt-subs`.
+Actions). Keep the `salin` CLI command name.
 
 ### 3. Add an in-memory `fetch()` with yta's shape
 
@@ -127,13 +127,13 @@ for snippet in transcript:
     print(snippet.start, snippet.text)
 ```
 
-`yt-subs` currently forces a file write and returns a `SubtitleResult` tree.
+`Salin` currently forces a file write and returns a `SubtitleResult` tree.
 That is great for ETL, but it is not the 80% use case. Add:
 
 ```python
-from yt_subs import YtSubs
+from salin import Salin
 
-transcript = YtSubs(languages="en").fetch("dQw4w9WgXcQ")
+transcript = Salin(languages="en").fetch("dQw4w9WgXcQ")
 transcript.video_id, transcript.language_code, transcript.is_generated
 for snippet in transcript:              # text, start, duration
     ...
@@ -185,13 +185,13 @@ code. Publish a short migration guide instead:
 ```diff
 - from youtube_transcript_api import YouTubeTranscriptApi
 - transcript = YouTubeTranscriptApi().fetch(video_id)
-+ from yt_subs import YtSubs
-+ transcript = YtSubs(languages="en").fetch(video_id)
++ from salin import Salin
++ transcript = Salin(languages="en").fetch(video_id)
 ```
 
 ### 4. Cookies are broken for metadata extraction (done)
 
-`YtSubs(cookies="chrome")` only passes cookies to the yt-dlp subtitle
+`Salin(cookies="chrome")` only passes cookies to the yt-dlp subtitle
 fallback. `inspect()`, `resolve()`, and `download()` call
 `extract_info(url)` with no cookies, so age-restricted/region-locked videos
 fail before the cookie is ever used. `_download_subtitles_direct()` also
@@ -203,9 +203,9 @@ too: the README recommends a `cookies.txt` you control, but there is no way
 to pass one. The client currently only accepts browser specs.
 
 ```python
-YtSubs(cookies="chrome")
-YtSubs(cookiefile="cookies.txt")     # missing today
-YtSubs(proxy="http://...")           # missing today
+Salin(cookies="chrome")
+Salin(cookiefile="cookies.txt")     # missing today
+Salin(proxy="http://...")           # missing today
 ```
 
 ### 5. Rate limits need a first-class error, not `MISSING` (done)
@@ -240,7 +240,7 @@ that tells you when YouTube is rate-limiting you and stops cleanly.*
   and either delete or gitignore the dev copy.
 - `.env` was untracked and not ignored; it is now ignored. Keep it that way.
 - Add `.github/workflows/ci.yml`: ruff, `ty`, pytest on 3.12/3.13, `uv build`.
-- Add `yt_subs/py.typed` and `Typing :: Typed`.
+- Add `salin/py.typed` and `Typing :: Typed`.
 - Add `__version__` from `importlib.metadata`.
 
 ---
@@ -256,12 +256,12 @@ not before it — otherwise the CLI has to parse files itself.
 Proposed surface:
 
 ```bash
-ytsubs fetch URL [URL...] -l en --format text|json|srt|vtt
-ytsubs bulk ids.txt -l en --workers 3 --format jsonl --out transcripts/ \
+salin fetch URL [URL...] -l en --format text|json|srt|vtt
+salin bulk ids.txt -l en --workers 3 --format jsonl --out transcripts/ \
   --resume --skip-existing --cookies-from-browser chrome
-ytsubs inspect URL --json
-ytsubs clean transcripts/ --format vtt
-ytsubs doctor
+salin inspect URL --json
+salin clean transcripts/ --format vtt
+salin doctor
 ```
 
 - `--format text` → cleaned prose to stdout (pipe-friendly).
@@ -318,7 +318,7 @@ Measured on 6 videos:
 ### 10. Translation and language coverage
 
 `is_native_auto_caption_track()` deliberately drops `tlang` tracks, so
-`yt-subs` cannot return YouTube's auto-translated captions. yta can
+`Salin` cannot return YouTube's auto-translated captions. yta can
 (`transcript.translate("es")`). Add `translate_to=` / `--translate-to` by
 selecting the `tlang` track, and document the difference between a manual
 track, a native auto track, and a translated auto track.
@@ -333,7 +333,7 @@ The README is good but leads with API reference. Add, above the fold:
 - A one-paragraph "why this exists" with the block story.
 - A comparison table:
 
-| | yta | yt-subs |
+| | yta | Salin |
 |---|---|---|
 | In-memory snippets | yes | add `fetch()` |
 | File output | no | yes (7 formats) |
@@ -361,11 +361,11 @@ the benchmark contradicts.
 
 ### 12. Productize the indexing extension
 
-`yt-subs-dev/yt_subs/extensions/indexing/` already contains Postgres FTS
+`yt-subs-dev/salin/extensions/indexing/` already contains Postgres FTS
 schema and RPC. That is a much bigger differentiator than another downloader:
-"transcripts in, searchable Postgres out." If you productize it, `yt-subs`
+"transcripts in, searchable Postgres out." If you productize it, `Salin`
 becomes the ETL layer for transcript search, not just a yta replacement.
-Keep it optional (`yt-subs[indexing]`) so the core stays small.
+Keep it optional (`Salin[indexing]`) so the core stays small.
 
 ---
 
@@ -394,35 +394,36 @@ Keep it optional (`yt-subs[indexing]`) so the core stays small.
 Constraints: English, Spanish, French, or Tagalog; short; typeable; available
 on PyPI; works as a CLI command; not embarrassing in any of those languages.
 
-### Current state: provisional, not decided
+### Decision: Salin
 
-The distribution name is `subtitlekit` and the README/logo follow it, but the
-name is **not final**. SubtitleKit is the easy interim choice (clear, SEO, safe);
-**Tinig** is still the strongest Tagalog brand and **Salin** the most on-the-nose
-meaning. A Tagalog name is more unique, and it keeps a family of open-source
-projects in one naming language, which is worth real consideration.
+Chosen 2026-10-28: **Salin** (Tagalog, "translation / copy") is the project
+name, for branding *and* code. `subtitlekit` was the interim English choice;
+**SubtitleKit** may still replace it later, and **Tinig** remains the
+alternative Tagalog brand. Salin was picked because the meaning is immediately
+clear to anyone who knows Tagalog, and it avoids the "Kit" overpromise the
+multi-site experiment did not support (only Dailymotion worked; Vimeo, TED and
+archive.org did not).
 
-The multi-site experiment only partly supports the "Kit" argument: Dailymotion
-works with the right dependency and format, but Vimeo, TED and archive.org did
-not. So it is not a YouTube-only tool, but "Kit" still overpromises breadth. A
-Tagalog name does not have that problem.
+What this rename moved:
 
-What has moved: dist name `subtitlekit`, README/badges, `assets/logo.svg`. The
-import path is still `yt_subs` and the client is still `YtSubs`.
+- Distribution name: `subtitlekit` → `salin` (`pyproject.toml`).
+- Import package: `yt_subs` → `salin`; client `YtSubs` → `Salin`; errors
+  `YtSubs*Error` → `Salin*Error`; default output dir `yt_subs_downloads` →
+  `salin_downloads`.
+- README, badges, and the `assets/logo.svg` accessible name (the art is
+  unchanged).
 
-Manual steps either way:
+Still manual:
 
-- Rename the GitHub repo `krvspacetime/yt-subs` → the chosen name. GitHub
-  redirects old URLs, so badge links survive the transition.
-- Reserve the PyPI name before publishing.
-- When the code rename happens: `yt_subs/` → the new package, `YtSubs` → the new
-  class, `YtSubs*Error` → matching errors, `yt_subs_downloads` →
-  `<name>_downloads`.
+- Rename the GitHub repo `krvspacetime/yt-subs` → `salin`. The badge and
+  `Homepage` links are intentionally left pointing at `yt-subs` until then;
+  GitHub redirects keep them working after the rename.
+- Reserve the PyPI name `salin` before publishing.
 
 ### Icon options
 
 Line art on a rounded square, drawn at 128px. `assets/logo.svg` currently holds
-the SubtitleKit layers mark.
+the Salin layers mark.
 
 | Tinig — voice bubble | Tinig — sound waves | Salin — swap arrows |
 |:---:|:---:|:---:|
@@ -459,8 +460,8 @@ A record):
 
 | name | meaning | PyPI | domains | notes |
 |---|---|---|---|---|
-| **Tinig** | voice | free | `.dev`/`.io` free | *your current pick*; elegant, 5 letters, fits captions |
-| **Salin** | translation, copy | free | `.io` free | most on-the-nose meaning for subtitles; 5 letters |
+| **Tinig** | voice | free | `.dev`/`.io` free | strongest alternative; elegant, 5 letters, fits captions |
+| **Salin** | translation, copy | free | `.io` free | *chosen*; most on-the-nose meaning for subtitles; 5 letters |
 | **Bigkas** | utterance, pronunciation | free | `.dev`/`.io` free | precise for captions; 6 letters |
 | **Sulyap** | glimpse, glance | free | `.dev`/`.io` free | evocative of reading along; 6 letters |
 | **Pahayag** | statement, declaration | free | `.dev`/`.io` free | captions as statements; 7 letters |
@@ -487,17 +488,17 @@ Avoid: `Salita` (Spanish false friend: "little living room"), `Tala` (taken),
 `Substream` (taken), `yt-subs` long-term (ties you to YouTube's trademark and
 limits expansion to other yt-dlp sites).
 
-If you stay with **Tinig**, the practical combo is PyPI `tinig`, CLI `tinig`
-(or keep `ytsubs` as the command and `tinig` as the package), domain
-`tinig.dev`. Other same-rank picks: **Salin** if you want the meaning to be
-obvious to anyone who knows Tagalog, **Bigkas** if you want the most precise
-description of what the tool extracts.
+**Salin** is the chosen name; the practical combo is PyPI `salin`, CLI `salin`,
+domain `salin.dev` (`.io` also free). Same-rank alternatives if it is ever
+revisited: **Tinig** if you want the most elegant Tagalog brand, **Bigkas** if
+you want the most precise description of what the tool extracts.
 
 Recommendation:
 
-- **Ship now:** publish `yt-subs` on PyPI (it is free), keep the repo name,
-  add the `ytsubs` CLI. This is zero-friction and lets you iterate.
-- **If you rebrand:** **Hango** is the strongest combination of meaning,
+- **Ship now:** publish `salin` on PyPI (it is free), keep the repo name until
+  the GitHub rename, add the `salin` CLI. This is zero-friction and lets you
+  iterate.
+- **If you rebrand again:** **Hango** is the strongest combination of meaning,
   length, uniqueness, and availability. **Tinig** is the most elegant.
   **SubtitleKit** is the safest English/SEO choice. **Subtitula** is the best
   if your audience is Spanish/Portuguese-first.
@@ -514,7 +515,7 @@ The reasoning:
 
 - **Where the time goes.** A download is ~4s of metadata extraction plus ~0.3s
   of subtitle bytes, and both are network-bound inside yt-dlp. The Python in
-  `yt-subs` is orchestration, language resolution, and text cleaning — CPU work
+  `Salin` is orchestration, language resolution, and text cleaning — CPU work
   that is nowhere near the profile. Rewriting it in Rust would not make
   downloads faster, so there is no performance case.
 - **The hard part is not yours, and it is in Python.** The fragile work — the
@@ -540,7 +541,7 @@ Where Rust *does* make sense, and how to sequence it:
 
 1. **Release the Python package now**, under the chosen name, on PyPI. Nothing
    below is worth blocking that.
-2. **Optional Rust CLI** (`tinig`/`salin`/`subtitlekit`) that reuses the core
+2. **Optional Rust CLI** (`tinig`/`salin`/`salin`) that reuses the core
    from your other Rust project and shells out to yt-dlp. This is a genuine
    brand and distribution win — a single static binary, `brew install`, no
    Python runtime — and it is the most attractive Rust path. Keep the Python
@@ -567,7 +568,7 @@ Done:
 
 - ~~#1 Relicense to MIT, add PyPI metadata~~ — MIT LICENSE, `license`, authors,
   and project URLs are in `pyproject.toml`; `uv build` emits `License-Expression: MIT`.
-- ~~#3 Add `fetch()`~~ — `YtSubs.fetch()` returns a yta-shaped
+- ~~#3 Add `fetch()`~~ — `Salin.fetch()` returns a yta-shaped
   `FetchedTranscript` from the `json3` track in memory.
 - ~~#4/#5 Rate-limit errors + cookies/proxy~~ — `RATE_LIMITED` status,
   `RateLimitedError`, `Retry-After`, `strict=True`, the `download_many`
@@ -597,6 +598,6 @@ Next, in the order I'd do them:
    floor (#P2), and the Rust CLI / PyO3 accelerator discussed above.
 
 The local benchmark harness in `bench/` (not committed) is reusable for step 6. The key is to run
-the clean yt-subs measurement on a fresh IP, and to measure paced vs burst
+the clean Salin measurement on a fresh IP, and to measure paced vs burst
 behavior — that is the number that will make the "better than yta" claim
 credible.

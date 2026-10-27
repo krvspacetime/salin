@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from yt_subs.shared.models import YtdlpVideoInfo
+from salin.shared.models import YtdlpVideoInfo
 
 MOCK_VIDEO_INFO_OK: YtdlpVideoInfo = {
     "_type": "video",

@@ -2,10 +2,10 @@ from pathlib import Path
 
 import pytest
 
-from yt_subs import YtSubs
-from yt_subs.core.ytdlp_opts import normalize_cookies, subtitle_download_opts
-from yt_subs.error import YtSubsValueError
-from yt_subs.shared.models import (
+from salin import Salin
+from salin.core.ytdlp_opts import normalize_cookies, subtitle_download_opts
+from salin.error import SalinValueError
+from salin.shared.models import (
     DownloadStatus,
     LangCodeRequested,
     LangCodeResolved,
@@ -29,7 +29,7 @@ def _base_opts() -> dict:
 
 
 def test_extract_opts_are_silent():
-    from yt_subs.core.ytdlp_opts import base_extract_opts
+    from salin.core.ytdlp_opts import base_extract_opts
 
     opts = base_extract_opts()
 
@@ -93,21 +93,21 @@ def test_normalize_cookies_profile_keyring_container():
 
 
 def test_normalize_cookies_rejects_unknown_browser():
-    with pytest.raises(YtSubsValueError):
+    with pytest.raises(SalinValueError):
         normalize_cookies("netscape")
 
 
 def test_normalize_cookies_rejects_malformed_spec():
-    with pytest.raises(YtSubsValueError):
+    with pytest.raises(SalinValueError):
         normalize_cookies("chrome:")
 
 
 def test_client_cookies_are_opt_in():
-    assert YtSubs().cookies is None
-    assert YtSubs(cookies="firefox:work").cookies == ("firefox", "work", None, None)
+    assert Salin().cookies is None
+    assert Salin(cookies="firefox:work").cookies == ("firefox", "work", None, None)
 
-    with pytest.raises(YtSubsValueError):
-        YtSubs(cookies="not-a-browser")
+    with pytest.raises(SalinValueError):
+        Salin(cookies="not-a-browser")
 
 
 def _mock_info() -> YtdlpVideoInfo:
@@ -126,23 +126,19 @@ def test_client_download_validates_cookies_override(monkeypatch):
         captured.update(kwargs)
         return ()
 
-    monkeypatch.setattr("yt_subs.client.download_subtitles", fake_download_subtitles)
-    monkeypatch.setattr(
-        "yt_subs.client.extract_info", lambda url, **kwargs: _mock_info()
-    )
+    monkeypatch.setattr("salin.client.download_subtitles", fake_download_subtitles)
+    monkeypatch.setattr("salin.client.extract_info", lambda url, **kwargs: _mock_info())
 
-    client = YtSubs(languages="en")
+    client = Salin(languages="en")
     client.download("https://x.test/v", cookies="chrome")
     assert captured["cookies"] == ("chrome", None, None, None)
 
-    with pytest.raises(YtSubsValueError):
+    with pytest.raises(SalinValueError):
         client.download("https://x.test/v", cookies="not-a-browser")
 
 
 def test_cookies_override_reaches_download_many(monkeypatch):
-    monkeypatch.setattr(
-        "yt_subs.client.extract_info", lambda url, **kwargs: _mock_info()
-    )
+    monkeypatch.setattr("salin.client.extract_info", lambda url, **kwargs: _mock_info())
 
     def fake_download_subtitles(*args, **kwargs):
         return (
@@ -156,8 +152,8 @@ def test_cookies_override_reaches_download_many(monkeypatch):
             ),
         )
 
-    monkeypatch.setattr("yt_subs.client.download_subtitles", fake_download_subtitles)
+    monkeypatch.setattr("salin.client.download_subtitles", fake_download_subtitles)
 
-    client = YtSubs(languages="en")
+    client = Salin(languages="en")
     results = list(client.download_many(["https://x.test/v"], cookies="firefox"))
     assert results[0].subtitles[0].status == DownloadStatus.OK

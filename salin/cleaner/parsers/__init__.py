@@ -9,8 +9,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from yt_subs.error import UnsupportedFormatError
-from yt_subs.shared.models import SubtitleFormat
+from salin.error import UnsupportedFormatError
+from salin.shared.models import SubtitleFormat
 
 from .common import CueReader, ParsedCue, SourceParser, timestamp_to_ms
 from .json3 import parse_json3_cues, read_json3_cues

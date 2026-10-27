@@ -15,13 +15,13 @@ from urllib.request import ProxyHandler, Request, build_opener, urlopen
 
 import yt_dlp
 
-from yt_subs.core.extractor import extract_info, is_native_auto_caption_track
-from yt_subs.core.ytdlp_opts import (
+from salin.core.extractor import extract_info, is_native_auto_caption_track
+from salin.core.ytdlp_opts import (
     proxy_supports_direct_fetch,
     subtitle_download_opts,
 )
-from yt_subs.error import ExtractorError, RateLimitedError, SubtitleDownloadError
-from yt_subs.shared.models import (
+from salin.error import ExtractorError, RateLimitedError, SubtitleDownloadError
+from salin.shared.models import (
     BrowserCookies,
     DownloadStatus,
     LangCodeResolved,
@@ -37,7 +37,7 @@ from yt_subs.shared.models import (
 
 log = logging.getLogger(__name__)
 
-_FETCH_USER_AGENT = "Mozilla/5.0 (compatible; yt-subs/0.1)"
+_FETCH_USER_AGENT = "Mozilla/5.0 (compatible; Salin/0.1)"
 
 _MAX_SUBTITLE_BYTES = 5 * 1024 * 1024
 
@@ -215,7 +215,7 @@ def fetch_subtitle_bytes(
 
     Error policy, in the order it is applied:
 
-    - ``429``: raise :class:`~yt_subs.error.RateLimitedError` immediately, with
+    - ``429``: raise :class:`~salin.error.RateLimitedError` immediately, with
       ``Retry-After`` when the server sent one. Never retried, never handed to
       yt-dlp: the endpoint is rate-limited, so retrying only makes it worse.
     - ``403``: signed track URLs expire. Call ``refresh_url`` once to get a
@@ -223,7 +223,7 @@ def fetch_subtitle_bytes(
     - ``5xx`` and connection errors: retry a bounded number of times with
       jittered backoff, then raise.
     - Anything else, including a response that does not look like the requested
-      format, raises :class:`~yt_subs.error.SubtitleDownloadError`.
+      format, raises :class:`~salin.error.SubtitleDownloadError`.
 
     Shared by the file-writing downloader and the in-memory ``fetch()`` path.
     """

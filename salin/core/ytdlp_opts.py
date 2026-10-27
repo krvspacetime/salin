@@ -9,8 +9,8 @@ from urllib.parse import urlsplit
 
 from yt_dlp.cookies import SUPPORTED_BROWSERS, SUPPORTED_KEYRINGS
 
-from yt_subs.error import YtSubsValueError
-from yt_subs.shared.models import BrowserCookies, SubtitleFormat, VideoId
+from salin.error import SalinValueError
+from salin.shared.models import BrowserCookies, SubtitleFormat, VideoId
 
 YOUTUBE_EXTRACTOR_ARGS: dict[str, dict[str, list[str]]] = {
     "youtube": {
@@ -43,7 +43,7 @@ def normalize_cookies(cookies: str | None) -> BrowserCookies | None:
 
     match_ = _COOKIE_SPEC_RE.fullmatch(cookies.strip())
     if match_ is None:
-        raise YtSubsValueError(
+        raise SalinValueError(
             f"invalid cookies spec: {cookies!r}. Expected BROWSER[+KEYRING]"
             "[:PROFILE][::CONTAINER], e.g. 'chrome' or 'firefox:myprofile'."
         )
@@ -54,14 +54,14 @@ def normalize_cookies(cookies: str | None) -> BrowserCookies | None:
     container = match_.group("container")
 
     if browser not in SUPPORTED_BROWSERS:
-        raise YtSubsValueError(
+        raise SalinValueError(
             f"unsupported browser: {browser!r}. Supported browsers are: "
             f"{', '.join(sorted(SUPPORTED_BROWSERS))}."
         )
     if keyring is not None:
         keyring = keyring.strip().upper()
         if keyring not in SUPPORTED_KEYRINGS:
-            raise YtSubsValueError(
+            raise SalinValueError(
                 f"unsupported keyring: {keyring!r}. Supported keyrings are: "
                 f"{', '.join(sorted(SUPPORTED_KEYRINGS))}."
             )
@@ -76,7 +76,7 @@ def normalize_cookiefile(cookiefile: Path | str | None) -> str | None:
 
     path = Path(cookiefile).expanduser()
     if not path.is_file():
-        raise YtSubsValueError(
+        raise SalinValueError(
             f"cookiefile does not exist or is not a file: {path}. "
             "Export cookies with a browser extension (Netscape format)."
         )
@@ -90,7 +90,7 @@ def normalize_proxy(proxy: str | None) -> str | None:
 
     parsed = urlsplit(proxy)
     if parsed.scheme not in PROXY_SCHEMES or not parsed.netloc:
-        raise YtSubsValueError(
+        raise SalinValueError(
             f"invalid proxy: {proxy!r}. Expected scheme://host:port with scheme "
             f"one of {', '.join(sorted(PROXY_SCHEMES))}."
         )
@@ -107,7 +107,7 @@ def proxy_supports_direct_fetch(proxy: str | None) -> bool:
 def require_direct_fetch_proxy(proxy: str | None) -> None:
     """Raise when ``fetch()`` was given a proxy urllib cannot use."""
     if not proxy_supports_direct_fetch(proxy):
-        raise YtSubsValueError(
+        raise SalinValueError(
             f"fetch() downloads caption bytes directly and cannot use proxy "
             f"{proxy!r}; only http:// proxies are supported here. Use "
             f"download() for SOCKS or https:// proxies."

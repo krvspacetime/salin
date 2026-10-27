@@ -3,7 +3,7 @@ transcript.py
 
 In-memory transcript objects shaped like ``youtube_transcript_api``'s.
 
-``YtSubs.fetch()`` returns a :class:`FetchedTranscript`: an iterable of
+``Salin.fetch()`` returns a :class:`FetchedTranscript`: an iterable of
 :class:`TranscriptSnippet` plus the video and language metadata. The field
 names and access patterns mirror ``youtube_transcript_api`` so existing code
 usually needs only the import line changed.

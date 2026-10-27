@@ -2,6 +2,13 @@ from __future__ import annotations
 
 import pytest
 
+from salin import FetchedTranscript, Salin, TranscriptSnippet
+from salin.error import (
+    LanguageParseError,
+    SalinValueError,
+    SubtitleDownloadError,
+    TranscriptUnavailableError,
+)
 from tests.fixtures import (
     MOCK_JSON3_CONTENT,
     MOCK_VIDEO_INFO_AUTO_ONLY,
@@ -9,13 +16,6 @@ from tests.fixtures import (
     MOCK_VIDEO_INFO_NO_SUBS,
     MOCK_VIDEO_INFO_OK,
     MOCK_VTT_CONTENT,
-)
-from yt_subs import FetchedTranscript, TranscriptSnippet, YtSubs
-from yt_subs.error import (
-    LanguageParseError,
-    SubtitleDownloadError,
-    TranscriptUnavailableError,
-    YtSubsValueError,
 )
 
 
@@ -31,7 +31,7 @@ def patch_bytes(monkeypatch):
             return payload
 
         monkeypatch.setattr(
-            "yt_subs.core.fetcher.fetch_subtitle_bytes", fake_fetch_subtitle_bytes
+            "salin.core.fetcher.fetch_subtitle_bytes", fake_fetch_subtitle_bytes
         )
         return calls
 
@@ -40,11 +40,11 @@ def patch_bytes(monkeypatch):
 
 def test_fetch_returns_yta_shaped_transcript(monkeypatch, patch_bytes):
     monkeypatch.setattr(
-        "yt_subs.client.extract_info", lambda url, **kwargs: MOCK_VIDEO_INFO_JSON3
+        "salin.client.extract_info", lambda url, **kwargs: MOCK_VIDEO_INFO_JSON3
     )
     calls = patch_bytes(MOCK_JSON3_CONTENT.encode())
 
-    transcript = YtSubs(languages="en").fetch("https://www.youtube.com/watch?v=abc123")
+    transcript = Salin(languages="en").fetch("https://www.youtube.com/watch?v=abc123")
 
     assert isinstance(transcript, FetchedTranscript)
     assert transcript.video_id == "abc123"
@@ -84,21 +84,21 @@ def test_fetch_accepts_bare_video_id(monkeypatch, patch_bytes):
         seen.append(url)
         return MOCK_VIDEO_INFO_JSON3
 
-    monkeypatch.setattr("yt_subs.client.extract_info", fake_extract)
+    monkeypatch.setattr("salin.client.extract_info", fake_extract)
     patch_bytes(MOCK_JSON3_CONTENT.encode())
 
-    YtSubs(languages="en").fetch("dQw4w9WgXcQ")
+    Salin(languages="en").fetch("dQw4w9WgXcQ")
 
     assert seen == ["https://www.youtube.com/watch?v=dQw4w9WgXcQ"]
 
 
 def test_fetch_auto_only_is_marked_generated(monkeypatch, patch_bytes):
     monkeypatch.setattr(
-        "yt_subs.client.extract_info", lambda url, **kwargs: MOCK_VIDEO_INFO_AUTO_ONLY
+        "salin.client.extract_info", lambda url, **kwargs: MOCK_VIDEO_INFO_AUTO_ONLY
     )
     calls = patch_bytes(MOCK_JSON3_CONTENT.encode())
 
-    transcript = YtSubs(languages="en").fetch("auto123")
+    transcript = Salin(languages="en").fetch("auto123")
 
     assert transcript.is_generated is True
     assert transcript.language == "English (auto-generated)"
@@ -107,23 +107,23 @@ def test_fetch_auto_only_is_marked_generated(monkeypatch, patch_bytes):
 
 def test_fetch_ignores_translated_auto_tracks(monkeypatch, patch_bytes):
     monkeypatch.setattr(
-        "yt_subs.client.extract_info", lambda url, **kwargs: MOCK_VIDEO_INFO_AUTO_ONLY
+        "salin.client.extract_info", lambda url, **kwargs: MOCK_VIDEO_INFO_AUTO_ONLY
     )
     patch_bytes(MOCK_JSON3_CONTENT.encode())
 
     # "de" only exists as a tlang auto-translated track, which is not a native
     # caption track, so it must not resolve.
     with pytest.raises(TranscriptUnavailableError):
-        YtSubs(languages="de").fetch("auto123")
+        Salin(languages="de").fetch("auto123")
 
 
 def test_fetch_falls_back_to_vtt(monkeypatch, patch_bytes):
     monkeypatch.setattr(
-        "yt_subs.client.extract_info", lambda url, **kwargs: MOCK_VIDEO_INFO_OK
+        "salin.client.extract_info", lambda url, **kwargs: MOCK_VIDEO_INFO_OK
     )
     calls = patch_bytes(MOCK_VTT_CONTENT.encode())
 
-    transcript = YtSubs(languages="en").fetch("https://www.youtube.com/watch?v=abc123")
+    transcript = Salin(languages="en").fetch("https://www.youtube.com/watch?v=abc123")
 
     assert calls == [("https://example.com/en.vtt", "vtt")]
     assert len(transcript) == 2
@@ -136,11 +136,11 @@ def test_fetch_falls_back_to_vtt(monkeypatch, patch_bytes):
 
 def test_fetch_raises_when_no_transcript(monkeypatch):
     monkeypatch.setattr(
-        "yt_subs.client.extract_info", lambda url, **kwargs: MOCK_VIDEO_INFO_NO_SUBS
+        "salin.client.extract_info", lambda url, **kwargs: MOCK_VIDEO_INFO_NO_SUBS
     )
 
     with pytest.raises(TranscriptUnavailableError) as excinfo:
-        YtSubs(languages="en").fetch("xyz789")
+        Salin(languages="en").fetch("xyz789")
 
     assert excinfo.value.video_id == "xyz789"
     assert "'en'" in str(excinfo.value)
@@ -148,16 +148,16 @@ def test_fetch_raises_when_no_transcript(monkeypatch):
 
 def test_fetch_requires_languages():
     with pytest.raises(LanguageParseError):
-        YtSubs().fetch("abc123")
+        Salin().fetch("abc123")
 
 
 def test_fetch_rejects_preserve_formatting(monkeypatch):
     monkeypatch.setattr(
-        "yt_subs.client.extract_info", lambda url, **kwargs: MOCK_VIDEO_INFO_JSON3
+        "salin.client.extract_info", lambda url, **kwargs: MOCK_VIDEO_INFO_JSON3
     )
 
-    with pytest.raises(YtSubsValueError, match="preserve_formatting"):
-        YtSubs(languages="en").fetch("abc123", preserve_formatting=True)
+    with pytest.raises(SalinValueError, match="preserve_formatting"):
+        Salin(languages="en").fetch("abc123", preserve_formatting=True)
 
 
 def test_fetch_wraps_http_errors(monkeypatch):
@@ -165,43 +165,43 @@ def test_fetch_wraps_http_errors(monkeypatch):
     from urllib.error import HTTPError
 
     monkeypatch.setattr(
-        "yt_subs.client.extract_info", lambda url, **kwargs: MOCK_VIDEO_INFO_JSON3
+        "salin.client.extract_info", lambda url, **kwargs: MOCK_VIDEO_INFO_JSON3
     )
 
     def boom(url, *, subtitle_format, **kwargs):
         raise HTTPError(url, 429, "Too Many Requests", Message(), None)
 
-    monkeypatch.setattr("yt_subs.core.fetcher.fetch_subtitle_bytes", boom)
+    monkeypatch.setattr("salin.core.fetcher.fetch_subtitle_bytes", boom)
 
     with pytest.raises(SubtitleDownloadError, match="HTTP 429"):
-        YtSubs(languages="en").fetch("abc123")
+        Salin(languages="en").fetch("abc123")
 
 
 def test_fetch_reuses_supplied_info(monkeypatch, patch_bytes):
     def boom(url):  # pragma: no cover - must never run
         raise AssertionError("extract_info should not be called when info is given")
 
-    monkeypatch.setattr("yt_subs.client.extract_info", boom)
+    monkeypatch.setattr("salin.client.extract_info", boom)
     patch_bytes(MOCK_JSON3_CONTENT.encode())
 
-    transcript = YtSubs(languages="en").fetch("abc123", info=MOCK_VIDEO_INFO_JSON3)
+    transcript = Salin(languages="en").fetch("abc123", info=MOCK_VIDEO_INFO_JSON3)
 
     assert transcript.video_id == "abc123"
 
 
 def test_fetch_rejects_hand_built_info():
-    with pytest.raises(YtSubsValueError):
-        YtSubs(languages="en").fetch("abc123", info={"id": "abc123"})
+    with pytest.raises(SalinValueError):
+        Salin(languages="en").fetch("abc123", info={"id": "abc123"})
 
 
 def test_fetch_honors_source_policy(monkeypatch, patch_bytes):
     monkeypatch.setattr(
-        "yt_subs.client.extract_info", lambda url, **kwargs: MOCK_VIDEO_INFO_AUTO_ONLY
+        "salin.client.extract_info", lambda url, **kwargs: MOCK_VIDEO_INFO_AUTO_ONLY
     )
     patch_bytes(MOCK_JSON3_CONTENT.encode())
 
     with pytest.raises(TranscriptUnavailableError):
-        YtSubs(languages="en", source_policy="manual_only").fetch("auto123")
+        Salin(languages="en", source_policy="manual_only").fetch("auto123")
 
-    transcript = YtSubs(languages="en", source_policy="auto_only").fetch("auto123")
+    transcript = Salin(languages="en", source_policy="auto_only").fetch("auto123")
     assert transcript.is_generated is True

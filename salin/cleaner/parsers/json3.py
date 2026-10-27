@@ -17,7 +17,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from yt_subs.cleaner.normalize import normalize_caption_text
+from salin.cleaner.normalize import normalize_caption_text
 
 from .common import ParsedCue
 
