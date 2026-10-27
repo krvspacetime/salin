@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="SubtitleKit — sliders">
+  <defs>
+    <linearGradient id="o5-bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1e40af"/>
+      <stop offset="1" stop-color="#60a5fa"/>
+    </linearGradient>
+  </defs>
+  <rect width="128" height="128" rx="30" fill="url(#o5-bg)"/>
+  <g fill="#bfdbfe">
+    <rect x="28" y="38" width="72" height="7" rx="3.5"/>
+    <rect x="28" y="61" width="72" height="7" rx="3.5"/>
+    <rect x="28" y="84" width="72" height="7" rx="3.5"/>
+  </g>
+  <g fill="#f8fafc">
+    <circle cx="48" cy="41.5" r="9"/>
+    <circle cx="82" cy="64.5" r="9"/>
+    <circle cx="62" cy="87.5" r="9"/>
+  </g>
+</svg>

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Salin — stacked speech bubbles">
+  <defs>
+    <linearGradient id="o4-bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#5b21b6"/>
+      <stop offset="1" stop-color="#8b5cf6"/>
+    </linearGradient>
+  </defs>
+  <rect width="128" height="128" rx="30" fill="url(#o4-bg)"/>
+  <path d="M36 78 L36 96 L54 78 Z" fill="#ddd6fe" opacity="0.65"/>
+  <rect x="22" y="24" width="66" height="56" rx="16" fill="#ddd6fe" opacity="0.65"/>
+  <path d="M52 96 L52 112 L70 96 Z" fill="#f5f3ff"/>
+  <rect x="38" y="50" width="68" height="48" rx="16" fill="#f5f3ff"/>
+  <rect x="50" y="64" width="34" height="8" rx="4" fill="#6d28d9"/>
+  <rect x="50" y="78" width="22" height="8" rx="4" fill="#a78bfa"/>
+</svg>
