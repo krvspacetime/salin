@@ -1,5 +1,5 @@
 [project]
-name = "yt-subs"
+name = "subtitlekit"
 version = "0.1.0"
 description = "A Python library that makes it easy to download any YouTube subtitle in any available format."
 readme = "README.md"
@@ -36,6 +36,9 @@ select = ["E4", "E7", "E9", "F", "I", "UP", "B"]
 
 [tool.uv]
 package = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["yt_subs"]
 
 [build-system]
 requires = ["hatchling"]

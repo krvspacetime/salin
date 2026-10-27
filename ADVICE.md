@@ -372,22 +372,39 @@ Keep it optional (`yt-subs[indexing]`) so the core stays small.
 Constraints: English, Spanish, French, or Tagalog; short; typeable; available
 on PyPI; works as a CLI command; not embarrassing in any of those languages.
 
-### Candidate marks
+### Decided: SubtitleKit (2026-10-27)
 
-The README header uses a neutral mark in `assets/logo.svg`, so the repo does
-not depend on the final name:
+**SubtitleKit** is the chosen name. It is instantly clear to a non-Tagalog
+audience, professional and SEO-friendly, and the least disruptive rebrand.
+**Tinig** was the strongest *brand* — distinctive and ownable — and stays the
+fallback if you later want a more evocative name; **Salin** was set aside as too
+generic.
 
-<p align="left"><img src="assets/logo.svg" width="72" alt="neutral mark"></p>
+What has moved so far: the distribution name is now `subtitlekit`, the README
+header/badges and `assets/logo.svg` are SubtitleKit. The import path is still
+`yt_subs` and the client is still `YtSubs`; the code rename is deliberately
+deferred.
 
-The three names still in play, as ready-to-drop icons:
+Remaining manual steps:
+
+- Rename the GitHub repo `krvspacetime/yt-subs` → `subtitlekit`. GitHub
+  redirects the old URLs, so the badge links keep working during the transition;
+  update `[project.urls]` and the badge hrefs afterwards.
+- Reserve the PyPI name `subtitlekit` before publishing.
+- When the code rename happens: `yt_subs/` → `subtitlekit/`, `YtSubs` →
+  `SubtitleKit`, `YtSubsError`/`YtSubsValueError` → `SubtitleKitError`/
+  `SubtitleKitValueError`, and the default output dir `yt_subs_downloads` →
+  `subtitlekit_downloads`.
+
+Icons for the runner-up names are kept for reference:
 
 | Tinig | Salin | SubtitleKit |
 |:---:|:---:|:---:|
 | <img src="assets/tinig.svg" width="72" alt="Tinig"> | <img src="assets/salin.svg" width="72" alt="Salin"> | <img src="assets/subtitlekit.svg" width="72" alt="SubtitleKit"> |
 | waveform — voice | overlaid cards — translation/copy | stacked layers — toolkit |
 
-When you commit to a name, copy its icon over `assets/logo.svg` and point the
-README header at it; the other two can be deleted.
+`assets/logo.svg` is the SubtitleKit mark (copied from `assets/subtitlekit.svg`);
+the Tinig and Salin icons can be deleted once you are sure.
 
 PyPI status checked 2026-10-27:
 

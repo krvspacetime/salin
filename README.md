@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="assets/logo.svg" width="96" height="96" alt="yt-subs logo">
+  <img src="assets/logo.svg" width="96" height="96" alt="SubtitleKit logo">
 </p>
 
-<h1 align="center">yt-subs</h1>
+<h1 align="center">SubtitleKit</h1>
 
 <p align="center">
   Inspect, resolve, download, and clean YouTube subtitle tracks from Python.
@@ -14,13 +14,13 @@
   <a href="https://github.com/krvspacetime/yt-subs/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/krvspacetime/yt-subs/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="Lint: ruff" src="https://img.shields.io/badge/lint-ruff-261230.svg">
   <img alt="Types: mypy-style, checked with ty" src="https://img.shields.io/badge/types-ty-ffd43b.svg">
-  <a href="https://pypi.org/project/yt-subs/"><img alt="PyPI" src="https://img.shields.io/badge/pypi-soon-lightgrey.svg"></a>
+  <a href="https://pypi.org/project/subtitlekit/"><img alt="PyPI" src="https://img.shields.io/badge/pypi-soon-lightgrey.svg"></a>
   <a href="https://github.com/sponsors/krvspacetime"><img alt="Sponsor" src="https://img.shields.io/badge/sponsor-%E2%9D%A4-ff69b4.svg"></a>
 </p>
 
 ---
 
-`yt-subs` is a typed Python library for working with YouTube subtitle tracks. It
+SubtitleKit is a typed Python library for working with YouTube subtitle tracks. It
 inspects which tracks and formats a video has, resolves requested languages
 against language-match and source policies, downloads the captions (to disk or
 straight into memory as snippets), and cleans rolling auto-caption noise into
@@ -36,18 +36,18 @@ It is also easy to break: it talks to YouTube's private player API, so when
 YouTube blocks your IP the library stops working entirely, and a burst of
 requests can get you a shared `429` with no clear signal.
 
-`yt-subs` uses yt-dlp's extraction, which is more resilient and keeps
+SubtitleKit uses yt-dlp's extraction, which is more resilient and keeps
 **inspecting and resolving** subtitle availability even when the caption
 endpoint is throttling. It also treats rate limits as a first-class result
 rather than a silent retry: you get `RateLimitedError` / `DownloadStatus.RATE_LIMITED`
 with the parsed `Retry-After`, and a bulk run can stop cleanly instead of
 hammering an endpoint that is already refusing it. Honest about the one limit it
 shares with everyone: caption *bytes* come from the same `timedtext` endpoint, so
-`yt-subs` can be rate-limited too — it just tells you instead of hiding it.
+SubtitleKit can be rate-limited too — it just tells you instead of hiding it.
 
 ## How it compares
 
-| | youtube-transcript-api | yt-subs |
+| | youtube-transcript-api | SubtitleKit |
 |---|---|---|
 | Snippets in memory | yes | yes (`fetch()`) |
 | Subtitle files on disk | no | yes (7 formats) |
@@ -184,7 +184,7 @@ Differences to know about:
   collapsed. `youtube-transcript-api` only strips HTML tags, so text can
   differ slightly for captions that contain those markers.
 - `preserve_formatting=True` is not supported and raises `YtSubsValueError`.
-- Failures raise yt-subs errors: `TranscriptUnavailableError` when no
+- Failures raise SubtitleKit errors: `TranscriptUnavailableError` when no
   requested language resolves, and `SubtitleDownloadError` when the caption
   request itself fails.
 - A `429` raises `RateLimitedError` (a `SubtitleDownloadError` subclass) with
@@ -285,7 +285,7 @@ Measured on the same video: the shared pipeline is one extraction (~4s) plus
 `info` must be a dict returned by `extract_info()`. Hand-built dicts are
 rejected — yt-dlp needs the full record (`id`, `extractor`, and the subtitle
 tracks) to download anything, so a trimmed dict would fail much later. Playlist
-results are rejected too; `yt-subs` downloads single videos only.
+results are rejected too; SubtitleKit downloads single videos only.
 
 ## Cleaning transcripts
 
@@ -428,7 +428,7 @@ than raising it.
 
 ## Throttling and rate limits
 
-`yt-subs` adds no artificial delay by default: `sleep_interval_subtitles`
+SubtitleKit adds no artificial delay by default: `sleep_interval_subtitles`
 defaults to `0` (the same default yt-dlp uses for its own
 `--sleep-interval-subtitles`). Subtitle tracks are one small request each, and
 the extra track requests are not what YouTube throttles.
@@ -448,7 +448,7 @@ yt-dlp and only applies when yt-dlp itself performs the download.
 
 YouTube enforces a shared limit on the `timedtext` caption endpoint that is
 independent of yt-dlp's page requests. When it trips, the request comes back
-`HTTP 429`, and yt-subs records it as a distinct status instead of a generic
+`HTTP 429`, and SubtitleKit records it as a distinct status instead of a generic
 error:
 
 ```python
@@ -541,7 +541,7 @@ at `download()`, which hands the fetch to yt-dlp and supports every scheme.
   thread and per request-config, so back-to-back calls reuse the connection and
   skip the ~0.3s client setup. A repeated extract drops from ~3.0s to ~1.2–1.6s
   in our measurements.
-- **Bounded retries.** `yt-dlp`'s defaults are patient; `yt-subs` caps
+- **Bounded retries.** `yt-dlp`'s defaults are patient; SubtitleKit caps
   `retries`, `extractor_retries`, and `socket_timeout` so a stuck request
   fails fast instead of stalling a batch.
 

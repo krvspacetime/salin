@@ -8,7 +8,7 @@ from .shared.models import LanguageMatch, SubtitleFormat, SubtitleSourcePolicy
 from .transcript import FetchedTranscript, TranscriptSnippet
 
 try:
-    __version__ = version("yt-subs")
+    __version__ = version("subtitlekit")
 except PackageNotFoundError:  # pragma: no cover - running from a source checkout
     __version__ = "0.0.0"
 
