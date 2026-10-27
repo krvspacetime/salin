@@ -26,8 +26,9 @@ against language-match and source policies, downloads the captions (to disk or
 straight into memory as snippets), and cleans rolling auto-caption noise into
 prose you can read, index, or feed to a model.
 
-It is built on [yt-dlp](https://github.com/yt-dlp/yt-dlp), so it supports every
-site yt-dlp does, not just YouTube.
+It uses [yt-dlp](https://github.com/yt-dlp/yt-dlp) for extraction. YouTube is the
+primary, tested target; other sites are best-effort and depend on what yt-dlp can
+expose (see [Other sites](#other-sites)).
 
 ## Why this exists
 
@@ -132,6 +133,24 @@ SubtitleResult(
             format=<SubtitleFormat.VTT: 'vtt'>,
             error=None)))
 ```
+
+### Other sites
+
+Extraction is delegated to yt-dlp, so YouTube is not a hard limit — but support
+depends on the site exposing subtitle tracks in a format you ask for, and on
+yt-dlp having the right networking dependency (some extractors need
+impersonation, e.g. `curl_cffi` for Dailymotion).
+
+Verified end to end: **Dailymotion**, which offered only `srt` in our sample:
+
+```python
+client = YtSubs(languages="en", subtitle_format="srt")
+result = client.download("https://www.dailymotion.com/video/x7tgad0")
+```
+
+Not verified here: Vimeo (OAuth 401), TED (extractor error) and archive.org (no
+captions exposed). Treat other sites as best-effort and call `inspect()` first to
+see which formats are actually available.
 
 ## Fetch transcripts in memory
 
@@ -252,26 +271,22 @@ SubtitleSourcePolicy.AUTO_THEN_MANUAL
 ## One metadata fetch per call
 
 `inspect()`, `resolve()`, `fetch()`, and `download()` each fetch the video's
-metadata once. That fetch averages ~4 seconds and is about 98% of a download's
-wall time; the subtitle bytes themselves are ~0.3s. Calling all of them on one
-video costs roughly 12s, almost all of it the same metadata fetched three
-times.
+metadata once. That fetch is ~4s and ~98% of a download's wall time (the bytes
+are ~0.3s), so calling three of them on one video costs ~12s — the same metadata
+three times.
 
-`download()` already resolves languages and reports every requested language,
-so most flows need a single call:
+`download()` already resolves and reports every requested language, so most
+flows need just one call:
 
 ```python
 result = client.download(url)
-for subtitle in result.subtitles:
-    print(subtitle.requested, subtitle.resolved, subtitle.status)
+for sub in result.subtitles:
+    print(sub.requested, sub.resolved, sub.status)
 ```
 
-When you do need the intermediate stages, reuse the metadata with `info=`.
-`extract_info()` is exported for exactly this:
+When you need the intermediate stages, extract once and pass `info=`:
 
 ```python
-from yt_subs import extract_info
-
 info = extract_info(url)                                # one request per video
 availability = client.inspect(url, info=info)
 resolved = client.resolve(url, languages=["en", "de"], info=info)
@@ -279,70 +294,35 @@ transcript = client.fetch(url, languages="en", info=info)
 result = client.download(url, languages=["en", "de"], info=info)
 ```
 
-Measured on the same video: the shared pipeline is one extraction (~4s) plus
-~0.6s of work, versus ~12s for three independent calls.
-
-`info` must be a dict returned by `extract_info()`. Hand-built dicts are
-rejected — yt-dlp needs the full record (`id`, `extractor`, and the subtitle
-tracks) to download anything, so a trimmed dict would fail much later. Playlist
-results are rejected too; SubtitleKit downloads single videos only.
+That pipeline is ~4.6s versus ~12s for three independent calls. `info` must come
+from `extract_info()`: hand-built or trimmed dicts are rejected, and playlists
+are not supported.
 
 ## Cleaning transcripts
 
-`download()` gives you the subtitle file exactly as YouTube serves it. That file
-is a poor thing to read, index, or feed to a model, and `clean_transcript()`
-turns it into prose.
+`download()` writes the subtitle file exactly as YouTube serves it — a poor
+thing to read, index, or feed to a model. `clean_transcript()` turns it into
+prose.
 
-### Why
-
-Auto-generated captions carry two kinds of noise. Captions are written as they
-are spoken, in short overlapping windows, so the same phrase lands on screen
-three times in a row:
+Auto-captions are written in short overlapping windows, so the same phrase
+appears on screen several times, with inline word-timing tags in between:
 
 ```text
-00:48:18.950 --> 00:48:18.960 align:start position:0%
 multiple hours to capture the same level
-
-00:48:18.960 --> 00:48:20.710 align:start position:0%
 multiple hours to capture the same level
-of<00:48:19.119><c> mistake</c><00:48:19.520><c> because</c><00:48:20.000><c> it</c><00:48:20.240><c> requires</c><00:48:20.560><c> like</c>
-
-00:48:20.710 --> 00:48:20.720 align:start position:0%
+of<00:48:19.119><c> mistake</c><00:48:19.520><c> because</c> ...
 of mistake because it requires like
 ```
 
-Those three cues are on screen *simultaneously* — a scrolling window, not three
-successive statements. Read in file order, "multiple hours to capture the same
-level" and "of mistake because it requires like" each appear twice, plus the
-inline `<00:48:19.119><c>` word-timing tags are not text at all.
-
-On top of that, YouTube's caption formats are display markup rather than prose:
-
-```xml
-<p t="1360" d="1680">[♪♪♪]</p>
-<p t="18640" d="3240">♪ We&#39;re no strangers to love ♪</p>
-<p t="22640" d="4320">♪ You know the rules<br />and so do I ♪</p>
-```
-
-Cleaning does three things: strips display markup and stage directions
-(`[Music]`, `(laughter)`, `>>` speaker chevrons, music notes), merges the
-overlapping windows, and returns one paragraph.
-
-### What you get
-
-The three cues above become:
+They also carry display markup and stage directions (`[Music]`, `(laughter)`,
+`>>`, `♪`, `<br />`). Cleaning strips that markup, merges the overlapping
+windows, and returns one paragraph:
 
 ```text
 multiple hours to capture the same level of mistake because it requires like
 ```
 
-and the `srv3` file becomes:
-
-```text
-We're no strangers to love You know the rules and so do I
-```
-
-To write those out:
+Write the cleaned text next to (or into) a directory:
 
 ```python
 from yt_subs import YtSubs, clean_transcript
@@ -351,10 +331,7 @@ result = YtSubs(languages="en", subtitle_format="vtt").download(url)
 paths = clean_transcript(result, output_dir="transcripts")
 ```
 
-With `output_dir` omitted, each transcript is written next to its source
-subtitle. `max_workers` cleans in parallel (default `1`).
-
-To get the text without touching the filesystem, use `clean_cues()`:
+Or get it without touching the filesystem:
 
 ```python
 from yt_subs import clean_cues
@@ -363,28 +340,16 @@ subtitle = result.ok_subs[0]
 text = clean_cues(subtitle.sub_path, subtitle.format)
 ```
 
-Every `SubtitleFormat` is parsed: `vtt`, `srt`, `json3`, `srv1`, `srv2`, `srv3`,
-and `ttml`. Add another in `yt_subs/cleaner/parsers/` and register it in
-`CUE_READERS`.
+`max_workers` cleans in parallel (default `1`); with `output_dir` omitted each
+transcript is written next to its source. Every `SubtitleFormat` is parsed:
+`vtt`, `srt`, `json3`, `srv1`, `srv2`, `srv3`, `ttml`.
 
-### VTT is approximate
-
-Six of the seven formats are exact. `vtt` is not, and the difference is small:
-on a 72-minute auto-captioned podcast the cleaned `vtt` transcript came out 41
-words longer than the same video's other six formats (15734 vs 15693, 0.3%).
-
-Auto-caption `vtt` is the only rolling format, and YouTube sometimes repeats a
-word *inside* a single cue, where the overlap merge cannot see it:
-
-```text
-cue: startup world in Belgium. I did that for for a little while and then moved to
-```
-
-The cleaner cannot tell that seam artifact from a genuine stumble like `or or` or
-`it it`, both of which are real and appear in every format, so it leaves both
-alone. This only affects auto-generated captions, and only `vtt`; manually
-authored tracks are usually not rolling. If you need the exact text, prefer
-`srt`, `srv1`, `srv3`, `json3` or `ttml`.
+**VTT is approximate.** It is the only rolling format, and YouTube sometimes
+repeats a word *inside* one cue where the overlap merge cannot see it. On a
+72-minute auto-captioned podcast the cleaned `vtt` came out 0.3% longer (41
+words) than the same video's other six formats. Manual tracks are usually not
+rolling; choose `srt`, `srv1`, `srv3`, `json3`, or `ttml` when you need exact
+text.
 
 ## Bulk downloads
 
@@ -426,23 +391,93 @@ mean: one run at `max_workers=4` took 38.4s — slower than sequential — while
 another took 18.8s. If you see bulk jobs stalling, drop to 2–3 workers rather
 than raising it.
 
+## Benchmarks
+
+One residential IP, Windows, `yt-dlp 2026.07.04`, `youtube-transcript-api 1.2.4`,
+`yt-subs 0.1.0`, 2026-10-27. 480 videos from a Postgres table where
+`captions_available = true`, shuffled with a fixed seed; `en` only, sequential,
+no artificial delay. Times are local, and the machine was in normal use, so
+sub-second differences are noise.
+
+### How fast each library gets blocked
+
+| run | attempted | succeeded | first block | wall | throughput | p50 latency |
+|---|---:|---:|---|---:|---:|---:|
+| `youtube-transcript-api` | 93 | 88 | #89, ~103s | 108s | 51.6/min | 1.13s |
+| SubtitleKit | 480 | 479 | none | 43.5 min | 11.1/min | 4.47s |
+
+`youtube-transcript-api` made 88 consecutive requests at ~1.16s each, then hit
+`IpBlocked` on #89 and failed every request after that in ~1.2s. SubtitleKit
+then ran 479 of 480 videos in one continuous 43.5-minute session with **zero
+blocks**; the one failure was a genuinely unavailable video.
+
+Throughput still degraded: 16.1 videos/min for the first 100, then ~10.1/min for
+the rest, with mean latency rising from 3.7s to ~5.9s. That looks like soft
+throttling — YouTube slowing the connection without returning `429`.
+
+### The limit both libraries share
+
+Caption bytes come from the same `youtube.com/api/timedtext` endpoint whichever
+library asks. Running `youtube-transcript-api` first poisoned the next
+SubtitleKit run: yt-dlp still extracted `id`, `title`, and all 100 caption track
+lists, but every caption fetch returned `HTTP 429`. So the useful claim is
+narrower than "yt-dlp doesn't get blocked":
+
+- SubtitleKit keeps **inspecting and resolving** while `youtube-transcript-api`
+  is blocked.
+- Caption bytes are rate-limited separately, and a burst from either library
+  spends the same budget.
+
+At ~11 videos/min the limit did not trip for 43.5 minutes. We have not shown it
+survives `youtube-transcript-api`-level throughput (~52/min); it probably would
+not.
+
+### How long a block lasts
+
+- The `youtube-transcript-api` block was still active 35+ minutes after it
+  started, and the shared `timedtext` limit stayed closed long enough to ruin
+  the next run.
+- In practice a burst like this has kept the IP limited for **1–2 days** on this
+  connection — repeated observation, not one controlled measurement.
+- Re-probed ~3 hours after the run: `youtube-transcript-api` still `IpBlocked`
+  and SubtitleKit still got `429` on caption bytes, while yt-dlp metadata
+  extraction still worked. The block outlives the session; metadata survives it.
+
+### Content parity
+
+| metric | youtube-transcript-api | SubtitleKit |
+|---|---:|---:|
+| raw characters (median) | 6606.5 | 6606.5 |
+| snippets (median) | 111.5 | 111.5 |
+| latency (mean) | 1.13s | 3.16s |
+
+Measured on the 88 videos both libraries handled; counts matched cue-for-cue on
+three sampled videos. SubtitleKit is ~2.8x slower per video because it pays a
+full yt-dlp extraction — the price of surviving the watch-page block. This run
+predates the pooled-client change, which cuts repeat extractions further.
+
+### When you will still get blocked
+
+- A burst of dozens of videos in a minute can close the shared `timedtext`
+  limit for hours to days, with either library.
+- Page-level blocks (yta's failure) do not stop `inspect()` or `resolve()`; the
+  caption endpoint still does.
+- Pace bulk work at ~10–12 videos/min, use 2–3 workers, and set
+  `max_consecutive_rate_limits` so a run stops instead of hammering a closed
+  endpoint.
+
 ## Throttling and rate limits
 
 SubtitleKit adds no artificial delay by default: `sleep_interval_subtitles`
-defaults to `0` (the same default yt-dlp uses for its own
-`--sleep-interval-subtitles`). Subtitle tracks are one small request each, and
-the extra track requests are not what YouTube throttles.
-
-Raise the interval if request volume is your bottleneck instead:
+defaults to `0`. Raise it when request volume, not latency, is the bottleneck:
 
 ```python
 client = YtSubs(languages=["en", "de", "ja", "pt-BR"], sleep_interval_subtitles=2)
 ```
 
-Each extra language then costs `(languages - 1) x interval` seconds of sleep —
-with 4 languages and the old default of 2s that was 6s of dead time per video
-against roughly 5s of real work. `sleep_interval_requests` is forwarded to
-yt-dlp and only applies when yt-dlp itself performs the download.
+Each extra language then costs `(languages - 1) x interval` seconds per video.
+`sleep_interval_requests` is forwarded to yt-dlp and only applies when yt-dlp
+performs the download itself.
 
 ### When YouTube rate-limits you
 

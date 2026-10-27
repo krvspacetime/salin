@@ -6,7 +6,7 @@ in-memory snippets, and is easy to install. `yt-subs` is technically stronger
 in several places, but most of that strength is invisible to a yta user
 evaluating the README for 60 seconds.
 
-The benchmark (`bench/RESULTS.md`) changes the positioning in one important
+The benchmark (local `bench/RESULTS.md`, not committed) changes the positioning in one important
 way: **yt-subs is not immune to YouTube rate limits.** It survives the
 watch-page block that kills yta (479/480 captioned videos over 43.5 minutes,
 zero blocks, at ~11 videos/min), but caption bytes come from the same
@@ -49,6 +49,17 @@ polish.
   session reuse and metadata caching are still open.
 - **#11 README rewrite**: done. Centered header with badges, the yta comparison
   table, the rate-limit story, a performance section, and a dev/CI section.
+- **Multi-site: partially verified.** Dailymotion works end to end once a
+  yt-dlp-supported `curl_cffi` is installed (0.15.x; 2.x is rejected) and you
+  request `srt`, the only format it exposed. Vimeo (OAuth 401), TED (extractor
+  error) and archive.org (no captions) did not work. The README now says YouTube
+  is the tested target and other sites are best-effort, with the Dailymotion
+  recipe. Keep "every site yt-dlp does" out until more sites are proven.
+- **Benchmarks re-checked** (same day, ~3h after the run): the IP was still
+  limited — `youtube-transcript-api` `IpBlocked`, SubtitleKit `HTTP 429` on
+  `timedtext`, while yt-dlp metadata extraction still worked. The README now has
+  a full Benchmarks section (speed, block onset, block duration, content
+  parity); `bench/RESULTS.md` (local) has the raw runs.
 - Everything else is still open. Suggested order at the bottom of this file.
 
 ---
@@ -325,7 +336,7 @@ The README is good but leads with API reference. Add, above the fold:
 | License | MIT | AGPL today — change |
 | Python | 3.9+ | 3.12+ |
 
-- A benchmark section with the table from `bench/RESULTS.md`, the date, the
+- A benchmark section with the results from the local `bench/` harness, the date, the
   yt-dlp version, and the caveat that timedtext is shared. Honesty here is a
   differentiator; overclaiming "never blocked" will be disproved in a day.
 - A "when you will still get blocked" section: cookies, proxies, pacing,
@@ -372,39 +383,47 @@ Keep it optional (`yt-subs[indexing]`) so the core stays small.
 Constraints: English, Spanish, French, or Tagalog; short; typeable; available
 on PyPI; works as a CLI command; not embarrassing in any of those languages.
 
-### Decided: SubtitleKit (2026-10-27)
+### Current state: provisional, not decided
 
-**SubtitleKit** is the chosen name. It is instantly clear to a non-Tagalog
-audience, professional and SEO-friendly, and the least disruptive rebrand.
-**Tinig** was the strongest *brand* — distinctive and ownable — and stays the
-fallback if you later want a more evocative name; **Salin** was set aside as too
-generic.
+The distribution name is `subtitlekit` and the README/logo follow it, but the
+name is **not final**. SubtitleKit is the easy interim choice (clear, SEO, safe);
+**Tinig** is still the strongest Tagalog brand and **Salin** the most on-the-nose
+meaning. A Tagalog name is more unique, and it keeps a family of open-source
+projects in one naming language, which is worth real consideration.
 
-What has moved so far: the distribution name is now `subtitlekit`, the README
-header/badges and `assets/logo.svg` are SubtitleKit. The import path is still
-`yt_subs` and the client is still `YtSubs`; the code rename is deliberately
-deferred.
+The multi-site experiment only partly supports the "Kit" argument: Dailymotion
+works with the right dependency and format, but Vimeo, TED and archive.org did
+not. So it is not a YouTube-only tool, but "Kit" still overpromises breadth. A
+Tagalog name does not have that problem.
 
-Remaining manual steps:
+What has moved: dist name `subtitlekit`, README/badges, `assets/logo.svg`. The
+import path is still `yt_subs` and the client is still `YtSubs`.
 
-- Rename the GitHub repo `krvspacetime/yt-subs` → `subtitlekit`. GitHub
-  redirects the old URLs, so the badge links keep working during the transition;
-  update `[project.urls]` and the badge hrefs afterwards.
-- Reserve the PyPI name `subtitlekit` before publishing.
-- When the code rename happens: `yt_subs/` → `subtitlekit/`, `YtSubs` →
-  `SubtitleKit`, `YtSubsError`/`YtSubsValueError` → `SubtitleKitError`/
-  `SubtitleKitValueError`, and the default output dir `yt_subs_downloads` →
-  `subtitlekit_downloads`.
+Manual steps either way:
 
-Icons for the runner-up names are kept for reference:
+- Rename the GitHub repo `krvspacetime/yt-subs` → the chosen name. GitHub
+  redirects old URLs, so badge links survive the transition.
+- Reserve the PyPI name before publishing.
+- When the code rename happens: `yt_subs/` → the new package, `YtSubs` → the new
+  class, `YtSubs*Error` → matching errors, `yt_subs_downloads` →
+  `<name>_downloads`.
 
-| Tinig | Salin | SubtitleKit |
+### Icon options
+
+Line art on a rounded square, drawn at 128px. `assets/logo.svg` currently holds
+the SubtitleKit layers mark.
+
+| Tinig — voice bubble | Tinig — sound waves | Salin — swap arrows |
 |:---:|:---:|:---:|
-| <img src="assets/tinig.svg" width="72" alt="Tinig"> | <img src="assets/salin.svg" width="72" alt="Salin"> | <img src="assets/subtitlekit.svg" width="72" alt="SubtitleKit"> |
-| waveform — voice | overlaid cards — translation/copy | stacked layers — toolkit |
+| <img src="assets/option-tinig-bubble.svg" width="72" alt="Tinig voice bubble"> | <img src="assets/option-tinig-waves.svg" width="72" alt="Tinig sound waves"> | <img src="assets/option-salin-swap.svg" width="72" alt="Salin swap arrows"> |
 
-`assets/logo.svg` is the SubtitleKit mark (copied from `assets/subtitlekit.svg`);
-the Tinig and Salin icons can be deleted once you are sure.
+| Salin — stacked bubbles | SubtitleKit — sliders | Neutral — screen and play |
+|:---:|:---:|:---:|
+| <img src="assets/option-salin-bubbles.svg" width="72" alt="Salin stacked bubbles"> | <img src="assets/option-kit-sliders.svg" width="72" alt="SubtitleKit sliders"> | <img src="assets/option-screen-play.svg" width="72" alt="Screen and play"> |
+
+Earlier set: <img src="assets/tinig.svg" width="28" alt="Tinig bars">
+<img src="assets/salin.svg" width="28" alt="Salin cards">
+<img src="assets/subtitlekit.svg" width="28" alt="SubtitleKit layers">.
 
 PyPI status checked 2026-10-27:
 
@@ -566,7 +585,7 @@ Next, in the order I'd do them:
 6. Optional later: translation (#10), indexing productization (#12), Python
    floor (#P2), and the Rust CLI / PyO3 accelerator discussed above.
 
-The benchmark harness in `bench/` is reusable for step 6. The key is to run
+The local benchmark harness in `bench/` (not committed) is reusable for step 6. The key is to run
 the clean yt-subs measurement on a fresh IP, and to measure paced vs burst
 behavior — that is the number that will make the "better than yta" claim
 credible.
