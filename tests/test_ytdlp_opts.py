@@ -126,7 +126,9 @@ def test_client_download_validates_cookies_override(monkeypatch):
         return ()
 
     monkeypatch.setattr("yt_subs.client.download_subtitles", fake_download_subtitles)
-    monkeypatch.setattr("yt_subs.client.extract_info", lambda url: _mock_info())
+    monkeypatch.setattr(
+        "yt_subs.client.extract_info", lambda url, **kwargs: _mock_info()
+    )
 
     client = YtSubs(languages="en")
     client.download("https://x.test/v", cookies="chrome")
@@ -137,7 +139,9 @@ def test_client_download_validates_cookies_override(monkeypatch):
 
 
 def test_cookies_override_reaches_download_many(monkeypatch):
-    monkeypatch.setattr("yt_subs.client.extract_info", lambda url: _mock_info())
+    monkeypatch.setattr(
+        "yt_subs.client.extract_info", lambda url, **kwargs: _mock_info()
+    )
 
     def fake_download_subtitles(*args, **kwargs):
         return (

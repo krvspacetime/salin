@@ -60,6 +60,7 @@ class DownloadStatus(StrEnum):
     OK = "ok"
     MISSING = "missing"
     UNAVAILABLE = "unavailable"
+    RATE_LIMITED = "rate_limited"
     ERROR = "error"
 
 
@@ -108,10 +109,18 @@ class SubtitleFile:
     sub_path: Path | None = None
     format: SubtitleFormat | None = None
     error: str | None = None
+    retry_after: int | None = None
 
     def __post_init__(self):
-        if self.error is not None and self.status != DownloadStatus.ERROR:
-            raise ValueError("error can only be set when status is ERROR")
+        if self.error is not None and self.status not in (
+            DownloadStatus.ERROR,
+            DownloadStatus.RATE_LIMITED,
+        ):
+            raise ValueError(
+                "error can only be set when status is ERROR or RATE_LIMITED"
+            )
+        if self.retry_after is not None and self.status != DownloadStatus.RATE_LIMITED:
+            raise ValueError("retry_after can only be set when status is RATE_LIMITED")
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Self:
@@ -123,6 +132,7 @@ class SubtitleFile:
             sub_path=Path(data["sub_path"]) if data.get("sub_path") else None,
             format=SubtitleFormat(data["format"]) if data.get("format") else None,
             error=data.get("error"),
+            retry_after=data.get("retry_after"),
         )
 
 
@@ -141,6 +151,26 @@ class SubtitleResult:
             for s in self.subtitles
             if s.status == DownloadStatus.OK and s.sub_path is not None
         )
+
+    @property
+    def rate_limited_subs(self) -> tuple[SubtitleFile, ...]:
+        """Subtitles that failed because YouTube rate-limited the request."""
+        return tuple(
+            s for s in self.subtitles if s.status == DownloadStatus.RATE_LIMITED
+        )
+
+    @property
+    def is_rate_limited(self) -> bool:
+        """True when any requested subtitle hit the rate limit."""
+        return bool(self.rate_limited_subs)
+
+    @property
+    def retry_after(self) -> int | None:
+        """The largest ``Retry-After`` seen across rate-limited subtitles."""
+        values = [
+            s.retry_after for s in self.rate_limited_subs if s.retry_after is not None
+        ]
+        return max(values) if values else None
 
     @property
     def processable(self) -> Self | None:
@@ -192,6 +222,9 @@ class DownloadOverrides(TypedDict, total=False):
     language_match: LanguageMatch | None
     source_policy: SubtitleSourcePolicy | None
     cookies: str | None
+    cookiefile: Path | str | None
+    proxy: str | None
+    strict: bool
 
 
 class LanguageMatch(StrEnum):

@@ -22,6 +22,7 @@ from yt_subs.shared.models import (
     YtdlpVideoInfo,
     LangCode,
     SubtitleTrack,
+    BrowserCookies,
 )
 from yt_subs.error import ExtractorError, VideoUnavailableError
 
@@ -38,10 +39,24 @@ def is_native_auto_caption_track(track: SubtitleTrack) -> bool:
     return "tlang" not in query
 
 
-def extract_info(url: UrlStr) -> YtdlpVideoInfo:
-    """Fetch video metadata without downloading anything."""
+def extract_info(
+    url: UrlStr,
+    *,
+    cookies: BrowserCookies | None = None,
+    cookiefile: str | None = None,
+    proxy: str | None = None,
+) -> YtdlpVideoInfo:
+    """
+    Fetch video metadata without downloading anything.
+
+    ``cookies``/``cookiefile``/``proxy`` are needed for age-restricted,
+    region-locked, or bot-checked videos; pass them whenever the same request
+    will later download subtitle bytes, or the signed track URLs from an
+    anonymous extraction may not be usable.
+    """
     try:
-        with yt_dlp.YoutubeDL(base_extract_opts()) as ydl:
+        opts = base_extract_opts(cookies=cookies, cookiefile=cookiefile, proxy=proxy)
+        with yt_dlp.YoutubeDL(opts) as ydl:
             info = ydl.extract_info(url, download=False)
             return info
     except yt_dlp.utils.DownloadError as exc:

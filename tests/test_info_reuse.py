@@ -20,14 +20,14 @@ def test_extract_info_is_importable_from_the_package_root():
     assert yt_subs.extract_info is yt_subs.core.extract_info
 
 
-def _exploding_extract(url):
+def _exploding_extract(url, **kwargs):
     raise AssertionError(f"extract_info() must not be called, got {url!r}")
 
 
 def _patch_extract(monkeypatch):
     calls = []
 
-    def fake_extract(url):
+    def fake_extract(url, **kwargs):
         calls.append(url)
         return dict(MOCK_VIDEO_INFO_OK)
 

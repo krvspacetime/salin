@@ -18,7 +18,9 @@ from tests.fixtures import (
 
 
 def test_client_inspect(monkeypatch):
-    monkeypatch.setattr("yt_subs.client.extract_info", lambda url: MOCK_VIDEO_INFO_OK)
+    monkeypatch.setattr(
+        "yt_subs.client.extract_info", lambda url, **kwargs: MOCK_VIDEO_INFO_OK
+    )
 
     client = YtSubs(languages="en")
     availability = client.inspect("https://www.youtube.com/watch?v=abc123")
@@ -56,7 +58,9 @@ def test_download_many_survives_bad_format_override():
 
 
 def test_download_many_survives_bad_languages_override(monkeypatch):
-    monkeypatch.setattr("yt_subs.client.extract_info", lambda url: MOCK_VIDEO_INFO_OK)
+    monkeypatch.setattr(
+        "yt_subs.client.extract_info", lambda url, **kwargs: MOCK_VIDEO_INFO_OK
+    )
 
     def mock_download_subtitles(*args, **kwargs):
         return (
@@ -85,7 +89,9 @@ def test_download_many_survives_bad_languages_override(monkeypatch):
 
 
 def test_download_many_survives_filesystem_errors(monkeypatch):
-    monkeypatch.setattr("yt_subs.client.extract_info", lambda url: MOCK_VIDEO_INFO_OK)
+    monkeypatch.setattr(
+        "yt_subs.client.extract_info", lambda url, **kwargs: MOCK_VIDEO_INFO_OK
+    )
 
     def mock_download_subtitles(*args, **kwargs):
         raise OSError("disk full")
@@ -103,7 +109,9 @@ def test_download_many_survives_filesystem_errors(monkeypatch):
 
 
 def test_client_resolve(monkeypatch):
-    monkeypatch.setattr("yt_subs.client.extract_info", lambda url: MOCK_VIDEO_INFO_OK)
+    monkeypatch.setattr(
+        "yt_subs.client.extract_info", lambda url, **kwargs: MOCK_VIDEO_INFO_OK
+    )
 
     client = YtSubs(languages="en")
     resolved = client.resolve("https://www.youtube.com/watch?v=abc123")
@@ -115,7 +123,9 @@ def test_client_resolve(monkeypatch):
 
 
 def test_client_download_success(monkeypatch, tmp_path):
-    monkeypatch.setattr("yt_subs.client.extract_info", lambda url: MOCK_VIDEO_INFO_OK)
+    monkeypatch.setattr(
+        "yt_subs.client.extract_info", lambda url, **kwargs: MOCK_VIDEO_INFO_OK
+    )
 
     def mock_download_subtitles(*args, **kwargs):
         output_dir = kwargs["output_dir"]
@@ -150,7 +160,7 @@ def test_client_download_success(monkeypatch, tmp_path):
 def test_client_download_many_graceful_failures(monkeypatch):
     call_count = 0
 
-    def mock_extract_info(url):
+    def mock_extract_info(url, **kwargs):
         nonlocal call_count
         call_count += 1
         if "fail" in url:
@@ -200,7 +210,9 @@ def test_client_download_many_graceful_failures(monkeypatch):
 
 
 def test_client_constructor_no_languages_inspect_works(monkeypatch):
-    monkeypatch.setattr("yt_subs.client.extract_info", lambda url: MOCK_VIDEO_INFO_OK)
+    monkeypatch.setattr(
+        "yt_subs.client.extract_info", lambda url, **kwargs: MOCK_VIDEO_INFO_OK
+    )
 
     client = YtSubs()
     availability = client.inspect("https://www.youtube.com/watch?v=abc123")

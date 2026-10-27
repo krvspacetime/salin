@@ -58,6 +58,61 @@ SubtitleResult(
             format=<SubtitleFormat.VTT: 'vtt'>, 
             error=None)))
 ```
+## Fetch transcripts in memory
+
+`fetch()` is the `youtube-transcript-api`-shaped path: it returns snippets
+directly, writes no file, and does not download the video.
+
+```python
+from yt_subs import YtSubs
+
+transcript = YtSubs(languages="en").fetch("dQw4w9WgXcQ")
+len(transcript)                      # number of snippets
+transcript.video_id                  # 'dQw4w9WgXcQ'
+transcript.language                  # 'English' (YouTube's name for the track)
+transcript.language_code             # 'en'
+transcript.is_generated              # False for a manual track, True for auto
+
+for snippet in transcript:           # snippet.text / .start / .duration (seconds)
+    print(snippet.start, snippet.text)
+
+transcript.to_raw_data()             # [{'text': ..., 'start': ..., 'duration': ...}]
+transcript.text                      # every snippet joined with a space
+```
+
+`fetch()` accepts a full URL or a bare video ID, and honors the same
+`language_match`, `source_policy`, and `info=` options as `download()`. It
+fetches the `json3` track when one exists (falling back to `srv3`, `srv1`,
+`srv2`, `ttml`, or `vtt`), in memory.
+
+### Migrating from youtube-transcript-api
+
+```diff
+- from youtube_transcript_api import YouTubeTranscriptApi
+- transcript = YouTubeTranscriptApi().fetch(video_id, languages=("en",))
++ from yt_subs import YtSubs
++ transcript = YtSubs(languages="en").fetch(video_id)
+```
+
+```python
+from yt_subs import FetchedTranscript, TranscriptSnippet
+```
+
+Differences to know about:
+
+- `fetch()` takes the language list in the `YtSubs(...)` constructor (or a
+  `languages=` override), not as a positional argument.
+- Snippets are **normalized**: inline markup, speaker chevrons (`>>`), and
+  stage directions such as `[Music]` are stripped, and whitespace is
+  collapsed. `youtube-transcript-api` only strips HTML tags, so text can
+  differ slightly for captions that contain those markers.
+- `preserve_formatting=True` is not supported and raises `YtSubsValueError`.
+- Failures raise yt-subs errors: `TranscriptUnavailableError` when no
+  requested language resolves, and `SubtitleDownloadError` when the caption
+  request itself fails.
+- A `429` raises `RateLimitedError` (a `SubtitleDownloadError` subclass) with
+  `.retry_after` set from the server's `Retry-After` header when present.
+
 ## Inspect subtitles
 
 Inspect shows the available auto and manual subs as well as their available formats.
@@ -109,7 +164,8 @@ SubtitleSourcePolicy.AUTO_THEN_MANUAL
 
 ## One metadata fetch per call
 
-`inspect()`, `resolve()`, and `download()` each fetch the video's metadata once.
+`inspect()`, `resolve()`, `fetch()`, and `download()` each fetch the video's
+metadata once.
 That fetch averages ~4 seconds and is about 98% of a download's wall time; the
 subtitle bytes themselves are ~0.3s. Calling all three on one video costs
 roughly 12s, almost all of it the same metadata fetched three times.
@@ -132,6 +188,7 @@ from yt_subs import extract_info
 info = extract_info(url)                                # one request per video
 availability = client.inspect(url, info=info)
 resolved = client.resolve(url, languages=["en", "de"], info=info)
+transcript = client.fetch(url, languages="en", info=info)
 result = client.download(url, languages=["en", "de"], info=info)
 ```
 
@@ -297,23 +354,90 @@ with 4 languages and the old default of 2s that was 6s of dead time per video
 against roughly 5s of real work. `sleep_interval_requests` is forwarded to
 yt-dlp and only applies when yt-dlp itself performs the download.
 
-## Browser Cookies
+### When YouTube rate-limits you
 
-Some videos only expose subtitles to signed-in clients. `yt-subs` does **not**
-touch your browser by default; opt in explicitly if you need age-restricted or
-region-locked tracks:
+YouTube enforces a shared limit on the `timedtext` caption endpoint that is
+independent of yt-dlp's page requests. When it trips, the request comes back
+`HTTP 429`, and yt-subs records it as a distinct status instead of a generic
+error:
 
 ```python
-client = YtSubs(languages="en", cookies="firefox:myprofile")
-# or per call
-result = client.download(url, cookies="chrome")
+result = client.download(url)
+
+if result.is_rate_limited:
+    print(result.retry_after)              # seconds from Retry-After, or None
+    for sub in result.rate_limited_subs:
+        print(sub.requested, sub.error)
+```
+
+- A `429` is **never retried** and never handed to yt-dlp, because yt-dlp
+  would retry the same limited endpoint with long, silent backoff.
+- `Retry-After` (delta-seconds or an HTTP-date) is parsed into
+  `SubtitleFile.retry_after`, and `SubtitleResult.retry_after` reports the
+  largest value seen across the requested subtitles.
+- Transient failures (5xx, connection errors, timeouts) are retried twice with
+  short jittered backoff. An expired signed URL (`403`) is refreshed once by
+  re-extracting the video before giving up.
+
+Pass `strict=True` to raise instead of returning a partial result:
+
+```python
+from yt_subs import RateLimitedError
+
+try:
+    client.download(url, strict=True)
+except RateLimitedError as exc:
+    wait = exc.retry_after or 60
+```
+
+For batches, cap how many rate-limited videos in a row you tolerate. The
+generator ends when the cap trips, so you can stop instead of hammering an
+endpoint YouTube has already throttled:
+
+```python
+results = client.download_many(urls, max_consecutive_rate_limits=3)
+for result in results:
+    ...
+# Stopped early; everything yielded so far is inspectable.
+```
+
+The counter resets on any non-rate-limited result. With `max_workers > 1`,
+"consecutive" is approximate because results arrive in completion order.
+
+## Cookies and proxies
+
+Some videos only expose subtitles to signed-in, region-locked, or differently
+routed clients. Pass the settings at the client level or per call:
+
+```python
+client = YtSubs(
+    languages="en",
+    cookies="firefox:myprofile",        # read from a browser
+    # cookiefile="~/cookies.txt",       # or a Netscape cookies.txt you control
+    # proxy="socks5://127.0.0.1:1080",  # or route through a proxy
+)
+
+# per call, overriding the client
+result = client.download(url, cookies="chrome", proxy="http://127.0.0.1:8080")
 ```
 
 `cookies` uses yt-dlp's syntax: `BROWSER[+KEYRING][:PROFILE][::CONTAINER]`, e.g.
 `"chrome"`, `"firefox"`, `"firefox+gnomekeyring"`, `"chromium::Container 1"`.
+`cookiefile` must be an existing Netscape-format `cookies.txt`. `proxy` accepts
+`http`, `https`, `socks4`, `socks4a`, `socks5`, and `socks5h` URLs. Invalid
+values raise `YtSubsValueError` before any request is made.
 
-> **Security note:** enabling this reads cookies from that browser's cookie
-> store (encrypted with your OS keyring) and sends your logged-in session to
-> the remote site with every request. Only use it when you trust the source,
-> and prefer a `cookies.txt` file you control over a browser profile on shared
+The same settings are used for metadata extraction, the direct caption fetch,
+the yt-dlp fallback, `fetch()`, and the re-extraction that happens when a
+signed track URL expires. `inspect()` and `resolve()` accept them too.
+
+One limitation: `fetch()` reads caption bytes directly with `urllib`, so it
+supports only `http://` proxies (the common CONNECT form). With an `https://`,
+`socks4`, or `socks5` proxy, `fetch()` raises `YtSubsValueError` and points you
+at `download()`, which hands the fetch to yt-dlp and supports every scheme.
+
+> **Security note:** enabling `cookies` reads from that browser's cookie store
+> (encrypted with your OS keyring) and sends your logged-in session to the
+> remote site with every request. Only use it when you trust the source, and
+> prefer a `cookies.txt` file you control over a browser profile on shared
 > machines.

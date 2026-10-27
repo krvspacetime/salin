@@ -95,7 +95,7 @@ def test_download_sanitizes_unsafe_video_id(monkeypatch, tmp_path):
 
     monkeypatch.setattr(
         downloader,
-        "_fetch_subtitle_bytes",
+        "fetch_subtitle_bytes",
         lambda url, **kw: b"WEBVTT\n\n00:00:01.000 --> 00:00:03.000\nhi\n",
     )
 
@@ -156,11 +156,11 @@ def test_download_uses_sanitized_id_for_ytdlp_outtmpl(monkeypatch, tmp_path):
 def test_shared_resolved_track_is_reported_for_every_request(monkeypatch, tmp_path):
     fetched = []
 
-    def fake_fetch(url, *, subtitle_format, timeout=30):
+    def fake_fetch(url, *, subtitle_format, timeout=30, **kwargs):
         fetched.append(url)
         return b"WEBVTT\n\n00:00:01.000 --> 00:00:03.000\nhi\n"
 
-    monkeypatch.setattr(downloader, "_fetch_subtitle_bytes", fake_fetch)
+    monkeypatch.setattr(downloader, "fetch_subtitle_bytes", fake_fetch)
 
     info: YtdlpVideoInfo = {
         "id": "abc123",
@@ -251,7 +251,7 @@ def _patch_fetch(monkeypatch, payload: bytes):
 
 
 def _fetch(url: str, subtitle_format: SubtitleFormat) -> bytes:
-    return downloader._fetch_subtitle_bytes(url, subtitle_format=subtitle_format)
+    return downloader.fetch_subtitle_bytes(url, subtitle_format=subtitle_format)
 
 
 def test_fetch_rejects_non_http_urls():
