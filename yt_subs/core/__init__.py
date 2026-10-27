@@ -12,6 +12,7 @@ from yt_subs.core.downloader import (
     find_track_url,
 )
 from yt_subs.core.extractor import (
+    close_ydl_pool,
     extract_info,
     inspect_subtitle_availability,
     inspect_subtitles,
@@ -21,6 +22,7 @@ from yt_subs.core.fetcher import FetchedCues, fetch_transcript_cues
 from yt_subs.core.resolver import resolve_availability
 
 __all__ = [
+    "close_ydl_pool",
     "download_subtitles",
     "extract_info",
     "fetch_transcript_cues",

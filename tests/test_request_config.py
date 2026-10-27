@@ -180,8 +180,10 @@ class _FakeYDL:
 def fake_ytdl(monkeypatch):
     _FakeYDL.captured = []
     _FakeYDL.extract_calls = []
+    extractor.close_ydl_pool()
     monkeypatch.setattr(extractor.yt_dlp, "YoutubeDL", _FakeYDL)
-    return _FakeYDL
+    yield _FakeYDL
+    extractor.close_ydl_pool()
 
 
 def test_extract_info_passes_request_options_to_ytdlp(fake_ytdl):

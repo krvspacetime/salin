@@ -7,7 +7,9 @@ No download happens here — pure inspection.
 
 from __future__ import annotations
 
+import atexit
 import logging
+import threading
 from urllib.parse import parse_qs, urlparse
 
 import yt_dlp
@@ -28,6 +30,61 @@ from yt_subs.shared.models import (
 )
 
 log = logging.getLogger(__name__)
+
+# Constructing a YoutubeDL is expensive -- it validates options, builds the
+# request handler and registers every extractor, roughly 0.3s per call -- and
+# that cost is paid once per video even though callers usually extract one
+# video at a time in a loop. Keep one instance per thread and per request-option
+# triple so repeated extracts reuse the setup instead of rebuilding it.
+_YdlKey = tuple[BrowserCookies | None, str | None, str | None]
+_ydl_local = threading.local()
+
+
+def _ydl_cache() -> dict[_YdlKey, yt_dlp.YoutubeDL]:
+    cache = getattr(_ydl_local, "cache", None)
+    if cache is None:
+        cache = {}
+        _ydl_local.cache = cache
+    return cache
+
+
+def _get_ydl(
+    cookies: BrowserCookies | None,
+    cookiefile: str | None,
+    proxy: str | None,
+) -> yt_dlp.YoutubeDL:
+    key: _YdlKey = (cookies, cookiefile, proxy)
+    cache = _ydl_cache()
+    ydl = cache.get(key)
+    if ydl is None:
+        opts = base_extract_opts(cookies=cookies, cookiefile=cookiefile, proxy=proxy)
+        ydl = yt_dlp.YoutubeDL(opts)
+        cache[key] = ydl
+    return ydl
+
+
+def close_ydl_pool() -> None:
+    """
+    Close and forget this thread's cached :class:`YoutubeDL` instances.
+
+    The pool is keyed by request options, so it never needs clearing just
+    because configuration changed; call this to release the instances early
+    (for example before a process forks or during teardown).
+    """
+    cache = getattr(_ydl_local, "cache", None)
+    if not cache:
+        return
+    for ydl in cache.values():
+        close = getattr(ydl, "close", None)
+        if callable(close):
+            try:
+                close()
+            except Exception:  # pragma: no cover - best-effort teardown
+                log.debug("Failed to close a pooled YoutubeDL", exc_info=True)
+    cache.clear()
+
+
+atexit.register(close_ydl_pool)
 
 
 def is_native_auto_caption_track(track: SubtitleTrack) -> bool:
@@ -56,10 +113,9 @@ def extract_info(
     anonymous extraction may not be usable.
     """
     try:
-        opts = base_extract_opts(cookies=cookies, cookiefile=cookiefile, proxy=proxy)
-        with yt_dlp.YoutubeDL(opts) as ydl:
-            info = ydl.extract_info(url, download=False)
-            return info
+        ydl = _get_ydl(cookies, cookiefile, proxy)
+        info = ydl.extract_info(url, download=False)
+        return info
     except yt_dlp.utils.DownloadError as exc:
         msg = str(exc)
         if any(
