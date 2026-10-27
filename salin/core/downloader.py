@@ -82,7 +82,15 @@ def expected_subtitle_path(
     lang: LangCodeResolved,
     subtitle_format: SubtitleFormat,
 ) -> Path:
-    dest = output_dir / f"{video_id}.{lang}.{subtitle_format}"
+    name = f"{video_id}.{lang}.{subtitle_format}"
+    # Reject path separators explicitly so the guard does not depend on the
+    # host OS: POSIX treats a backslash as an ordinary filename character, so
+    # the resolve() check below would let "..\\..\\evil" through there.
+    if "/" in name or "\\" in name:
+        raise SubtitleDownloadError(
+            f"refusing to write subtitle outside of {output_dir}: {video_id!r}"
+        )
+    dest = output_dir / name
     if dest.resolve().parent != output_dir.resolve():
         raise SubtitleDownloadError(
             f"refusing to write subtitle outside of {output_dir}: {video_id!r}"
