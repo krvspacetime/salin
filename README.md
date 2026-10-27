@@ -397,30 +397,31 @@ One residential IP, Windows, `yt-dlp 2026.07.04`, `youtube-transcript-api 1.2.4`
 `yt-subs 0.1.0`, 2026-10-27. 480 videos from a Postgres table where
 `captions_available = true`, shuffled with a fixed seed; `en` only, sequential,
 no artificial delay. Times are local, and the machine was in normal use, so
-sub-second differences are noise.
+sub-second differences are noise. Block onset and success/failure are reliable.
 
 ### How fast each library gets blocked
 
 | run | attempted | succeeded | first block | wall | throughput | p50 latency |
 |---|---:|---:|---|---:|---:|---:|
-| `youtube-transcript-api` | 93 | 88 | #89, ~103s | 108s | 51.6/min | 1.13s |
-| SubtitleKit | 480 | 479 | none | 43.5 min | 11.1/min | 4.47s |
+| `youtube-transcript-api` | 60 | 55 | #56, ~99s | 105s | 34.4/min | 1.22s |
+| SubtitleKit | 480 | 479 | none | 31.9 min | 15.0/min | 3.25s |
 
-`youtube-transcript-api` made 88 consecutive requests at ~1.16s each, then hit
-`IpBlocked` on #89 and failed every request after that in ~1.2s. SubtitleKit
-then ran 479 of 480 videos in one continuous 43.5-minute session with **zero
-blocks**; the one failure was a genuinely unavailable video.
+`youtube-transcript-api` made 55 consecutive requests at ~1.2s each, then hit
+`IpBlocked` and failed every request after that. An earlier run blocked at #89
+after ~103s, so the stable number is the wall time, not the video count:
+`youtube-transcript-api` is good for roughly **100 seconds** of sequential
+requests.
 
-Throughput still degraded: 16.1 videos/min for the first 100, then ~10.1/min for
-the rest, with mean latency rising from 3.7s to ~5.9s. That looks like soft
-throttling — YouTube slowing the connection without returning `429`.
+SubtitleKit then ran 479 of 480 in one continuous 31.9-minute session with
+**zero blocks**; the one failure was a genuinely unavailable video, so its
+success rate on usable videos is 100%.
 
 ### The limit both libraries share
 
 Caption bytes come from the same `youtube.com/api/timedtext` endpoint whichever
 library asks. Running `youtube-transcript-api` first poisoned the next
-SubtitleKit run: yt-dlp still extracted `id`, `title`, and all 100 caption track
-lists, but every caption fetch returned `HTTP 429`. So the useful claim is
+SubtitleKit run: yt-dlp still extracted `id`, `title`, and the full caption
+track list, but every caption fetch returned `HTTP 429`. So the useful claim is
 narrower than "yt-dlp doesn't get blocked":
 
 - SubtitleKit keeps **inspecting and resolving** while `youtube-transcript-api`
@@ -428,8 +429,8 @@ narrower than "yt-dlp doesn't get blocked":
 - Caption bytes are rate-limited separately, and a burst from either library
   spends the same budget.
 
-At ~11 videos/min the limit did not trip for 43.5 minutes. We have not shown it
-survives `youtube-transcript-api`-level throughput (~52/min); it probably would
+At ~15 videos/min the limit did not trip for half an hour. We have not shown it
+survives `youtube-transcript-api`-level throughput (~34/min); it probably would
 not.
 
 ### How long a block lasts
@@ -437,24 +438,40 @@ not.
 - The `youtube-transcript-api` block was still active 35+ minutes after it
   started, and the shared `timedtext` limit stayed closed long enough to ruin
   the next run.
+- A second burst kept the endpoint closed for well over an hour: a probe every
+  5 minutes still got `429` at the 60-minute mark. The ~45-minute recovery seen
+  once was the short case, not the norm.
 - In practice a burst like this has kept the IP limited for **1–2 days** on this
   connection — repeated observation, not one controlled measurement.
-- Re-probed ~3 hours after the run: `youtube-transcript-api` still `IpBlocked`
-  and SubtitleKit still got `429` on caption bytes, while yt-dlp metadata
-  extraction still worked. The block outlives the session; metadata survives it.
+- Metadata is never the thing that gets blocked. yt-dlp extraction kept working
+  throughout, and switching to a fresh IP cleared the limit immediately.
 
 ### Content parity
 
 | metric | youtube-transcript-api | SubtitleKit |
 |---|---:|---:|
-| raw characters (median) | 6606.5 | 6606.5 |
-| snippets (median) | 111.5 | 111.5 |
-| latency (mean) | 1.13s | 3.16s |
+| raw characters (median) | 7032 | 7032 |
+| snippets (median) | 116 | 116 |
+| latency (mean) | 1.22s | 3.86s |
 
-Measured on the 88 videos both libraries handled; counts matched cue-for-cue on
-three sampled videos. SubtitleKit is ~2.8x slower per video because it pays a
-full yt-dlp extraction — the price of surviving the watch-page block. This run
-predates the pooled-client change, which cuts repeat extractions further.
+Measured on the 55 videos both libraries handled; the median ratio was exactly
+1.000 and no video diverged by more than one character. SubtitleKit is ~3x
+slower per video because it pays a full yt-dlp extraction — the price of
+surviving the watch-page block.
+
+### Throughput
+
+Throughput is not stable enough to quote one number:
+
+- The 480-video run above averaged 15.0/min, dipped mid-run (10.6/min for
+  #101–200), then recovered to ~18/min for the last 280.
+- An earlier 480-video run averaged 11.0/min and stayed near 10/min after the
+  first hundred.
+
+Expect roughly **10–18 videos/min** single-threaded, with no hard block in
+either 480-video session. The faster run is also the first to reuse a `YoutubeDL`
+across videos (the pooled client), which likely explains much of the spread —
+though the two runs used different IPs, so it is not a controlled comparison.
 
 ### When you will still get blocked
 
@@ -462,7 +479,7 @@ predates the pooled-client change, which cuts repeat extractions further.
   limit for hours to days, with either library.
 - Page-level blocks (yta's failure) do not stop `inspect()` or `resolve()`; the
   caption endpoint still does.
-- Pace bulk work at ~10–12 videos/min, use 2–3 workers, and set
+- Pace bulk work at ~10–15 videos/min, use 2–3 workers, and set
   `max_consecutive_rate_limits` so a run stops instead of hammering a closed
   endpoint.
 

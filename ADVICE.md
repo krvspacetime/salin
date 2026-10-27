@@ -6,14 +6,14 @@ in-memory snippets, and is easy to install. `yt-subs` is technically stronger
 in several places, but most of that strength is invisible to a yta user
 evaluating the README for 60 seconds.
 
-The benchmark (local `bench/RESULTS.md`, not committed) changes the positioning in one important
-way: **yt-subs is not immune to YouTube rate limits.** It survives the
-watch-page block that kills yta (479/480 captioned videos over 43.5 minutes,
-zero blocks, at ~11 videos/min), but caption bytes come from the same
-`timedtext` endpoint and get 429'd too — one burst from yta took it down
-completely. The defensible claim is narrower and more useful: *yt-subs still
-inspects and resolves when yta is blocked, and at a sustainable pace it keeps
-fetching captions long after yta has died.*
+The benchmark (local `bench/RESULTS.md`, not committed) changes the positioning
+in one important way: **yt-subs is not immune to YouTube rate limits.** It
+survives the watch-page block that kills yta (479/480 captioned videos in one
+31.9-minute session, zero blocks, ~15 videos/min), but caption bytes come from
+the same `timedtext` endpoint and get 429'd too — one burst from yta took it
+down completely. The defensible claim is narrower and more useful: *yt-subs
+still inspects and resolves when yta is blocked, and at a sustainable pace it
+keeps fetching captions long after yta has died.*
 
 Below, P0 items are adoption blockers, P1 items are differentiators, P2 is
 polish.
@@ -48,18 +48,22 @@ polish.
   request-config, so a repeated extract drops from ~3.0s to ~1.2–1.6s. HTTP
   session reuse and metadata caching are still open.
 - **#11 README rewrite**: done. Centered header with badges, the yta comparison
-  table, the rate-limit story, a performance section, and a dev/CI section.
+  table, the rate-limit story, a performance section, a Benchmarks section, and
+  a dev/CI section.
 - **Multi-site: partially verified.** Dailymotion works end to end once a
   yt-dlp-supported `curl_cffi` is installed (0.15.x; 2.x is rejected) and you
   request `srt`, the only format it exposed. Vimeo (OAuth 401), TED (extractor
   error) and archive.org (no captions) did not work. The README now says YouTube
   is the tested target and other sites are best-effort, with the Dailymotion
   recipe. Keep "every site yt-dlp does" out until more sites are proven.
-- **Benchmarks re-checked** (same day, ~3h after the run): the IP was still
-  limited — `youtube-transcript-api` `IpBlocked`, SubtitleKit `HTTP 429` on
-  `timedtext`, while yt-dlp metadata extraction still worked. The README now has
-  a full Benchmarks section (speed, block onset, block duration, content
-  parity); `bench/RESULTS.md` (local) has the raw runs.
+- **Benchmarks: fresh IP re-run done.** `yta` is good for ~100 seconds of
+  sequential requests (blocked at #56 this time, #89 before — the wall time is
+  the stable number) before `IpBlocked`. `yt-subs` then ran 479/480 in one
+  31.9-minute session with zero blocks at ~15 videos/min. The shared `timedtext`
+  limit reproduces — one `yta` burst 429s yt-subs' caption fetches — and a
+  single burst kept the endpoint closed **past 60 minutes** of polling; a fresh
+  IP cleared it instantly. Content parity is exact (median ratio 1.000). The
+  README has the full section; `bench/RESULTS.md` (local) has the raw runs.
 - Everything else is still open. Suggested order at the bottom of this file.
 
 ---
