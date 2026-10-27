@@ -3,8 +3,15 @@ name = "yt-subs"
 version = "0.1.0"
 description = "A Python library that makes it easy to download any YouTube subtitle in any available format."
 readme = "README.md"
+license = "MIT"
+authors = [{ name = "krvspacetime", email = "krv.becinal@gmail.com" }]
 requires-python = ">=3.12"
 dependencies = ["yt-dlp[default]>=2026.3.17"]
+
+[project.urls]
+Homepage = "https://github.com/krvspacetime/yt-subs"
+Repository = "https://github.com/krvspacetime/yt-subs"
+Issues = "https://github.com/krvspacetime/yt-subs/issues"
 
 [dependency-groups]
 dev = ["pytest>=9.0.3", "ruff>=0.15.15", "ty>=0.0.42"]
