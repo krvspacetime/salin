@@ -77,7 +77,7 @@ polish.
 
 ## P0 — fix before promoting it
 
-### 1. License: AGPL-3.0 is a adoption blocker
+### 1. License: AGPL-3.0 is an adoption blocker
 
 `LICENSE` is AGPL-3.0. yta is MIT. Many companies and open-source projects
 ban AGPL outright, and a library that is imported into another program is

@@ -71,6 +71,10 @@ Prebuilt packages are coming to PyPI. Until then, install from git:
 uv add git+https://github.com/krvspacetime/yt-subs.git
 ```
 
+> **Naming:** the distribution and project are **SubtitleKit**, but the import
+> package is still `yt_subs` and the client is still `YtSubs` while the code
+> rename is in progress. Only the dist name and the docs have changed.
+
 ## Quick start
 
 ```python
@@ -394,8 +398,8 @@ than raising it.
 ## Benchmarks
 
 One residential IP, Windows, `yt-dlp 2026.07.04`, `youtube-transcript-api 1.2.4`,
-`yt-subs 0.1.0`, 2026-10-27/28, `en` only, sequential, no artificial delay. Two
-samples from the same Postgres table: 480 videos where `captions_available =
+`SubtitleKit 0.1.0`, 2026-10-27/28, `en` only, sequential, no artificial delay.
+Two samples from the same Postgres table: 480 videos where `captions_available =
 true`, and 1,000 videos sampled uniformly from all 9,776 rows. Both were
 shuffled with a fixed seed. Times are local and the machine was in normal use,
 so sub-second differences are noise; block onset and success/failure are
