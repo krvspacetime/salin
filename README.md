@@ -255,22 +255,46 @@ subtitles, or `None` when nothing succeeded.
 
 ### How many workers to use
 
-Measured on 8 videos, one language each, median of 3 rounds:
+More workers shorten a batch until YouTube's per-request latency starts rising
+with concurrency. Measured on 72 videos that already had English captions,
+split into six blocks of 12. Every worker count ran every block twice in
+randomized order, and each speedup is paired against the one-worker run of the
+same block (12 paired measurements per count):
 
-| `max_workers` | wall time | speedup |
-|---:|---:|---:|
-| 1 | 40.9s | 1.0x |
-| 2 | 23.5s | 1.7x |
-| 3 | 21.3s | 1.9x |
-| 4 | 21.8s | 1.9x |
-| 6 | 20.2s | 2.0x |
+| `max_workers` | median block | median speedup | mean speedup (95% CI) | throughput |
+|---:|---:|---:|---|---:|
+| 1 | 43.7s | 1.0x | — | 16/min |
+| 2 | 29.4s | 1.5x | 1.46x ± 0.25 | 22/min |
+| 3 | 19.5s | 2.3x | 2.11x ± 0.38 | 31/min |
+| 6 | 17.6s | 2.5x | 2.49x ± 0.43 | 37/min |
 
-Two or three workers is the practical ceiling. Each download spends about 4s on
-metadata extraction and only ~0.3s fetching subtitle bytes, and YouTube throttles
-concurrent extraction requests. Past three workers the gain is a few percent at
-best, and the tail gets worse: one run with four workers took 38.4s, slower than
-running sequentially. If bulk jobs stall, lower the worker count rather than
-raising it.
+We tested 1, 2, 3, and 6 workers; 4 and 5 were not measured. Three is the clear
+knee at roughly 2.3x sequential. Six was the fastest count tested, but its
+advantage over three was not reliable across the 12 paired blocks: a single slow
+request can add tens of seconds to any block, and that variance dominates the
+remaining gap. Use three workers as a default and six when a batch needs to
+finish sooner.
+
+The number to watch is throughput while the batch is running. Even two workers
+sustain about 22 videos/min and six about 37/min, both above the 11–15
+videos/min that completed long runs without a block. Workers make a batch
+finish sooner; they do not make a high request rate safe. For unattended runs,
+cap the overall rate by pausing the consumer between chunks:
+
+```python
+import time
+
+for i, result in enumerate(client.download_many(urls, max_workers=6), 1):
+    # ...
+    if i % 25 == 0:
+        time.sleep(60)
+```
+
+The generator stops submitting new work while the consumer sleeps, so in-flight
+requests drain during the pause. At six workers, 25 videos take roughly 40s,
+making each cycle about 100s, or ~15 videos/min.
+
+These timings count only the block runs; gaps and cooldowns were excluded.
 
 ## Rate limits
 
