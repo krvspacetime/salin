@@ -156,6 +156,19 @@ def test_version_exits_zero(capsys):
     assert capsys.readouterr().out.startswith("salin ")
 
 
+def test_format_choices_match_the_documented_lists():
+    assert cli.OUTPUT_FORMATS == ("text", "json", "jsonl", "srt", "vtt")
+    assert cli.SUBTITLE_FORMATS == (
+        "vtt",
+        "srt",
+        "json3",
+        "srv1",
+        "srv2",
+        "srv3",
+        "ttml",
+    )
+
+
 def test_missing_command_is_usage_error(capsys):
     with pytest.raises(SystemExit) as exc:
         run()

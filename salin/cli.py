@@ -22,6 +22,8 @@ import json
 import platform
 import sys
 from collections.abc import Sequence
+from dataclasses import dataclass
+from enum import StrEnum
 from pathlib import Path
 from typing import Any, NoReturn
 
@@ -50,8 +52,28 @@ EXIT_USAGE = 2
 EXIT_RATE_LIMITED = 3
 EXIT_NO_TRANSCRIPT = 4
 
+
+class OutputFormat(StrEnum):
+    """What ``fetch`` writes: rendered text, JSON, or a subtitle format."""
+
+    TEXT = "text"
+    JSON = "json"
+    JSONL = "jsonl"
+    SRT = "srt"
+    VTT = "vtt"
+
+
+class DownloadOutcome(StrEnum):
+    """Per-video classification, derived from the per-subtitle statuses."""
+
+    OK = "ok"
+    PARTIAL = "partial"
+    NO_TRANSCRIPT = "no_transcript"
+    ERROR = "error"
+
+
 SUBTITLE_FORMATS = tuple(fmt.value for fmt in SubtitleFormat)
-OUTPUT_FORMATS = ("text", "json", "jsonl", "srt", "vtt")
+OUTPUT_FORMATS = tuple(fmt.value for fmt in OutputFormat)
 MISSING_STATUSES = frozenset({DownloadStatus.UNAVAILABLE, DownloadStatus.MISSING})
 
 
@@ -61,6 +83,64 @@ class _CliExit(Exception):
     def __init__(self, code: int):
         super().__init__(code)
         self.code = code
+
+
+@dataclass(frozen=True, slots=True)
+class NetworkOptions:
+    cookies_from_browser: str | None
+    cookiefile: Path | None
+    proxy: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class LanguageOptions:
+    languages: tuple[str, ...]
+    match: LanguageMatch | None
+    source: SubtitleSourcePolicy | None
+
+
+@dataclass(frozen=True, slots=True)
+class InspectOptions:
+    urls: tuple[str, ...]
+    as_json: bool
+    network: NetworkOptions
+
+
+@dataclass(frozen=True, slots=True)
+class FetchOptions:
+    urls: tuple[str, ...]
+    input_file: Path | None
+    language: LanguageOptions
+    network: NetworkOptions
+    output_format: OutputFormat
+    out: Path | None
+
+
+@dataclass(frozen=True, slots=True)
+class DownloadOptions:
+    urls: tuple[str, ...]
+    input_file: Path | None
+    language: LanguageOptions
+    network: NetworkOptions
+    subtitle_format: SubtitleFormat
+    output_dir: Path | None
+    workers: int
+    as_json: bool
+
+
+@dataclass(frozen=True, slots=True)
+class CleanOptions:
+    paths: tuple[Path, ...]
+    output_dir: Path | None
+    recursive: bool
+    skip_existing: bool
+
+
+@dataclass(frozen=True, slots=True)
+class DoctorOptions:
+    network: NetworkOptions
+    language: LanguageOptions
+    check: str | None
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -111,7 +191,6 @@ def build_parser() -> argparse.ArgumentParser:
     )
     inspect.add_argument("urls", nargs="+", metavar="URL")
     inspect.add_argument("--json", action="store_true", help="print JSON")
-    inspect.set_defaults(func=cmd_inspect)
 
     fetch = subparsers.add_parser(
         "fetch", parents=[request], help="fetch transcripts in memory"
@@ -127,7 +206,6 @@ def build_parser() -> argparse.ArgumentParser:
         help="output format (default: text)",
     )
     fetch.add_argument("--out", type=Path, metavar="FILE", help="write to a file")
-    fetch.set_defaults(func=cmd_fetch)
 
     download = subparsers.add_parser(
         "download", parents=[request], help="download subtitle files"
@@ -157,7 +235,6 @@ def build_parser() -> argparse.ArgumentParser:
     download.add_argument(
         "--json", action="store_true", help="print one JSON object per video"
     )
-    download.set_defaults(func=cmd_download)
 
     clean = subparsers.add_parser(
         "clean", help="turn subtitle files into plain-text transcripts"
@@ -172,7 +249,6 @@ def build_parser() -> argparse.ArgumentParser:
     clean.add_argument(
         "--skip-existing", action="store_true", help="keep existing .txt files"
     )
-    clean.set_defaults(func=cmd_clean)
 
     doctor = subparsers.add_parser(
         "doctor",
@@ -182,7 +258,6 @@ def build_parser() -> argparse.ArgumentParser:
     doctor.add_argument(
         "--check", metavar="URL", help="fetch one URL to test the whole pipeline"
     )
-    doctor.set_defaults(func=cmd_doctor)
 
     return parser
 
@@ -190,11 +265,20 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
-    command = getattr(args, "func", None)
-    if command is None:  # pragma: no cover - argparse requires a subcommand
-        parser.error("missing command")
     try:
-        return int(command(args))
+        match args.command:
+            case "inspect":
+                return _run_inspect(_inspect_options(args))
+            case "fetch":
+                return _run_fetch(_fetch_options(args))
+            case "download":
+                return _run_download(_download_options(args))
+            case "clean":
+                return _run_clean(_clean_options(args))
+            case "doctor":
+                return _run_doctor(_doctor_options(args))
+            case _:  # pragma: no cover - argparse restricts the choices
+                parser.error(f"unknown command: {args.command}")
     except _CliExit as exc:
         return exc.code
     except KeyboardInterrupt:
@@ -222,21 +306,86 @@ def _split_languages(values: list[str] | None) -> list[str]:
     ]
 
 
-def _client(args: argparse.Namespace, *, need_languages: bool) -> Salin:
-    languages = _split_languages(getattr(args, "language", None))
-    if need_languages and not languages:
-        languages = ["en"]
-    return Salin(
-        languages=languages or None,
-        language_match=getattr(args, "match", None),
-        source_policy=getattr(args, "source", None),
-        cookies=getattr(args, "cookies_from_browser", None),
-        cookiefile=getattr(args, "cookiefile", None),
-        proxy=getattr(args, "proxy", None),
+def _network_options(args: argparse.Namespace) -> NetworkOptions:
+    return NetworkOptions(
+        cookies_from_browser=args.cookies_from_browser,
+        cookiefile=args.cookiefile,
+        proxy=args.proxy,
     )
 
 
-def _collect_urls(urls: list[str], input_file: Path | None) -> list[str]:
+def _language_options(args: argparse.Namespace) -> LanguageOptions:
+    return LanguageOptions(
+        languages=tuple(_split_languages(args.language)) or ("en",),
+        match=LanguageMatch(args.match) if args.match else None,
+        source=SubtitleSourcePolicy(args.source) if args.source else None,
+    )
+
+
+def _inspect_options(args: argparse.Namespace) -> InspectOptions:
+    return InspectOptions(
+        urls=tuple(args.urls),
+        as_json=bool(args.json),
+        network=_network_options(args),
+    )
+
+
+def _fetch_options(args: argparse.Namespace) -> FetchOptions:
+    return FetchOptions(
+        urls=tuple(args.urls),
+        input_file=args.input,
+        language=_language_options(args),
+        network=_network_options(args),
+        output_format=OutputFormat(args.format),
+        out=args.out,
+    )
+
+
+def _download_options(args: argparse.Namespace) -> DownloadOptions:
+    options = DownloadOptions(
+        urls=tuple(args.urls),
+        input_file=args.input,
+        language=_language_options(args),
+        network=_network_options(args),
+        subtitle_format=SubtitleFormat(args.subtitle_format),
+        output_dir=args.output_dir,
+        workers=int(args.workers),
+        as_json=bool(args.json),
+    )
+    if options.workers < 1:
+        _usage_error("--workers must be at least 1")
+    return options
+
+
+def _clean_options(args: argparse.Namespace) -> CleanOptions:
+    return CleanOptions(
+        paths=tuple(args.paths),
+        output_dir=args.output_dir,
+        recursive=bool(args.recursive),
+        skip_existing=bool(args.skip_existing),
+    )
+
+
+def _doctor_options(args: argparse.Namespace) -> DoctorOptions:
+    return DoctorOptions(
+        network=_network_options(args),
+        language=_language_options(args),
+        check=args.check,
+    )
+
+
+def _client(network: NetworkOptions, language: LanguageOptions | None = None) -> Salin:
+    return Salin(
+        languages=list(language.languages) if language else None,
+        language_match=language.match if language else None,
+        source_policy=language.source if language else None,
+        cookies=network.cookies_from_browser,
+        cookiefile=network.cookiefile,
+        proxy=network.proxy,
+    )
+
+
+def _collect_urls(urls: Sequence[str], input_file: Path | None) -> list[str]:
     collected = list(urls)
     if input_file is not None:
         try:
@@ -320,14 +469,14 @@ def _print_availability(availability: SubtitleAvailability) -> None:
             print(f"  {code}: {', '.join(sorted(formats.get(code, ()))) or '-'}")
 
 
-def cmd_inspect(args: argparse.Namespace) -> int:
-    client = _client(args, need_languages=False)
+def _run_inspect(options: InspectOptions) -> int:
+    client = _client(options.network)
     records: list[dict[str, Any]] = []
     ok = 0
     failed = 0
     rate_limited = False
 
-    for url in args.urls:
+    for url in options.urls:
         try:
             availability = client.inspect(url)
         except RateLimitedError as exc:
@@ -345,11 +494,11 @@ def cmd_inspect(args: argparse.Namespace) -> int:
         else:
             ok += 1
             records.append(_availability_dict(availability))
-            if not args.json:
+            if not options.as_json:
                 _print_availability(availability)
 
-    if args.json:
-        payload: Any = records[0] if len(records) == 1 else records
+    if options.as_json:
+        payload = records[0] if len(records) == 1 else records
         print(json.dumps(payload, ensure_ascii=False, indent=2))
 
     return _exit_code(ok=ok, failed=failed, no_transcript=0, rate_limited=rate_limited)
@@ -394,24 +543,36 @@ def _transcript_vtt(transcript: FetchedTranscript) -> str:
     return "WEBVTT\n\n" + "\n\n".join(blocks)
 
 
-def _render_transcript(transcript: FetchedTranscript, output_format: str) -> str:
-    if output_format == "text":
+def _render_transcript(
+    transcript: FetchedTranscript, output_format: OutputFormat
+) -> str:
+    if output_format is OutputFormat.TEXT:
         return transcript.text
-    if output_format == "json":
+    if output_format is OutputFormat.JSON:
         return json.dumps(_transcript_dict(transcript), ensure_ascii=False, indent=2)
-    if output_format == "srt":
+    if output_format is OutputFormat.SRT:
         return _transcript_srt(transcript)
-    if output_format == "vtt":
+    if output_format is OutputFormat.VTT:
         return _transcript_vtt(transcript)
     raise AssertionError(f"unhandled output format: {output_format}")
 
 
-def cmd_fetch(args: argparse.Namespace) -> int:
-    urls = _collect_urls(args.urls, args.input)
-    if args.format in ("srt", "vtt", "json") and len(urls) > 1:
-        _usage_error(f"--format {args.format} accepts one URL; use jsonl for many")
+def _run_fetch(options: FetchOptions) -> int:
+    urls = _collect_urls(options.urls, options.input_file)
+    if (
+        options.output_format
+        in (
+            OutputFormat.SRT,
+            OutputFormat.VTT,
+            OutputFormat.JSON,
+        )
+        and len(urls) > 1
+    ):
+        _usage_error(
+            f"--format {options.output_format} accepts one URL; use jsonl for many"
+        )
 
-    client = _client(args, need_languages=True)
+    client = _client(options.network, options.language)
     rendered: list[str] = []
     records: list[dict[str, Any]] = []
     ok = 0
@@ -436,20 +597,20 @@ def cmd_fetch(args: argparse.Namespace) -> int:
             print(f"salin: {url}: {exc}", file=sys.stderr)
         else:
             ok += 1
-            if args.format == "jsonl":
+            if options.output_format is OutputFormat.JSONL:
                 records.append({"ok": True, "url": url, **_transcript_dict(transcript)})
             else:
-                rendered.append(_render_transcript(transcript, args.format))
+                rendered.append(_render_transcript(transcript, options.output_format))
 
-    if args.format == "jsonl":
+    if options.output_format is OutputFormat.JSONL:
         output = "\n".join(json.dumps(record, ensure_ascii=False) for record in records)
-    elif args.format == "text":
+    elif options.output_format is OutputFormat.TEXT:
         output = "\n\n".join(rendered)
     else:
         output = "\n".join(rendered)
 
     if output:
-        _write(output, args.out)
+        _write(output, options.out)
 
     return _exit_code(
         ok=ok, failed=failed, no_transcript=no_transcript, rate_limited=rate_limited
@@ -480,14 +641,16 @@ def _subtitle_dict(result: SubtitleResult) -> dict[str, Any]:
     }
 
 
-def _classify_download(result: SubtitleResult) -> str:
-    """One label per video: ok, partial, no_transcript, or error."""
+def _classify_download(result: SubtitleResult) -> DownloadOutcome:
+    """One outcome per video, derived from the per-subtitle statuses."""
     if result.ok_subs:
-        return "ok" if len(result.ok_subs) == len(result.subtitles) else "partial"
+        if len(result.ok_subs) == len(result.subtitles):
+            return DownloadOutcome.OK
+        return DownloadOutcome.PARTIAL
     statuses = {sub.status for sub in result.subtitles}
     if statuses and statuses <= MISSING_STATUSES:
-        return "no_transcript"
-    return "error"
+        return DownloadOutcome.NO_TRANSCRIPT
+    return DownloadOutcome.ERROR
 
 
 def _download_failure_message(result: SubtitleResult) -> str:
@@ -499,12 +662,10 @@ def _download_failure_message(result: SubtitleResult) -> str:
     )
 
 
-def cmd_download(args: argparse.Namespace) -> int:
-    urls = _collect_urls(args.urls, args.input)
-    if args.workers < 1:
-        _usage_error("--workers must be at least 1")
+def _run_download(options: DownloadOptions) -> int:
+    urls = _collect_urls(options.urls, options.input_file)
 
-    client = _client(args, need_languages=True)
+    client = _client(options.network, options.language)
     ok = 0
     failed = 0
     no_transcript = 0
@@ -512,31 +673,31 @@ def cmd_download(args: argparse.Namespace) -> int:
 
     results = client.download_many(
         urls,
-        max_workers=args.workers,
-        output_dir=args.output_dir,
-        subtitle_format=args.subtitle_format,
+        max_workers=options.workers,
+        output_dir=options.output_dir,
+        subtitle_format=options.subtitle_format,
     )
     for result in results:
         outcome = _classify_download(result)
         if result.is_rate_limited:
             rate_limited = True
 
-        if args.json:
+        if options.as_json:
             print(json.dumps(_subtitle_dict(result), ensure_ascii=False))
-        elif outcome in ("ok", "partial"):
+        elif outcome in (DownloadOutcome.OK, DownloadOutcome.PARTIAL):
             for sub in result.ok_subs:
                 print(sub.sub_path)
 
-        if outcome == "ok":
+        if outcome is DownloadOutcome.OK:
             ok += 1
-        elif outcome == "partial":
+        elif outcome is DownloadOutcome.PARTIAL:
             failed += 1
-        elif outcome == "no_transcript":
+        elif outcome is DownloadOutcome.NO_TRANSCRIPT:
             no_transcript += 1
         else:
             failed += 1
 
-        if outcome != "ok" and not args.json:
+        if outcome is not DownloadOutcome.OK and not options.as_json:
             print(
                 f"salin: {result.video_id}: {_download_failure_message(result)}",
                 file=sys.stderr,
@@ -547,7 +708,7 @@ def cmd_download(args: argparse.Namespace) -> int:
     )
 
 
-def _subtitle_files(paths: list[Path], *, recursive: bool) -> list[Path]:
+def _subtitle_files(paths: Sequence[Path], *, recursive: bool) -> list[Path]:
     files: list[Path] = []
     for path in paths:
         if path.is_dir():
@@ -565,9 +726,9 @@ def _subtitle_files(paths: list[Path], *, recursive: bool) -> list[Path]:
     return files
 
 
-def cmd_clean(args: argparse.Namespace) -> int:
+def _run_clean(options: CleanOptions) -> int:
     try:
-        files = _subtitle_files(args.paths, recursive=args.recursive)
+        files = _subtitle_files(options.paths, recursive=options.recursive)
     except FileNotFoundError as exc:
         _fail(f"no such file or directory: {exc}")
 
@@ -579,11 +740,11 @@ def cmd_clean(args: argparse.Namespace) -> int:
     failed = 0
     for path in files:
         destination = (
-            args.output_dir / f"{path.stem}.txt"
-            if args.output_dir
+            options.output_dir / f"{path.stem}.txt"
+            if options.output_dir
             else path.with_suffix(".txt")
         )
-        if args.skip_existing and destination.exists():
+        if options.skip_existing and destination.exists():
             skipped += 1
             continue
         try:
@@ -603,19 +764,19 @@ def cmd_clean(args: argparse.Namespace) -> int:
     return EXIT_OK if ok or skipped else EXIT_FAILURE
 
 
-def cmd_doctor(args: argparse.Namespace) -> int:
+def _run_doctor(options: DoctorOptions) -> int:
     from yt_dlp.version import __version__ as yt_dlp_version
 
     print(f"salin {__version__}")
     print(f"Python {platform.python_version()} ({platform.platform()})")
     print(f"yt-dlp {yt_dlp_version}")
 
-    if not args.check:
+    if not options.check:
         return EXIT_OK
 
-    client = _client(args, need_languages=True)
+    client = _client(options.network, options.language)
     try:
-        transcript = client.fetch(args.check)
+        transcript = client.fetch(options.check)
     except RateLimitedError as exc:
         print(f"salin: smoke test rate limited: {exc}", file=sys.stderr)
         return EXIT_RATE_LIMITED
