@@ -441,7 +441,7 @@ timeout, so a stuck request fails fast rather than stalling a batch.
 ## How it compares
 
 If you only need in-memory snippets from YouTube, `youtube-transcript-api` is
-smaller and faster per video. Salin covers more of the surrounding work: files
+smaller and faster per video although you get blocked pretty much almost immediately (under a hundred videos) if you don't have residential proxies (or any of the solutions they document in their docs). Salin covers more of the surrounding work: files
 on disk, format conversion, cleaning, bulk runs, and behavior you can reason
 about when YouTube starts refusing requests.
 
