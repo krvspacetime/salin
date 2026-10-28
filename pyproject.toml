@@ -1,6 +1,6 @@
 [project]
 name = "salin"
-version = "0.1.1"
+version = "0.1.2"
 description = "Typed Python client for YouTube subtitles: inspect, resolve, download, fetch in memory, and clean caption tracks."
 readme = "README.md"
 license = "MIT"
