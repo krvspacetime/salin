@@ -34,6 +34,9 @@ Homepage = "https://github.com/krvspacetime/salin"
 Repository = "https://github.com/krvspacetime/salin"
 Issues = "https://github.com/krvspacetime/salin/issues"
 
+[project.scripts]
+salin = "salin.cli:main"
+
 [dependency-groups]
 dev = ["pytest>=9.0.3", "ruff>=0.15.15", "ty>=0.0.42"]
 

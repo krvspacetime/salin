@@ -234,6 +234,41 @@ repeats a word inside a single cue where the overlap merge cannot see it. On a
 the same video's other six formats. Manual tracks are usually not rolling;
 prefer `srt`, `srv1`, `srv3`, `json3`, or `ttml` when you need exact text.
 
+## Command line
+
+Installing the package also installs a `salin` command; `python -m salin` works
+if the script directory is not on `PATH`. The commands mirror the library:
+
+```bash
+salin inspect dQw4w9WgXcQ
+salin inspect dQw4w9WgXcQ --json
+salin fetch dQw4w9WgXcQ                        # caption text on stdout
+salin fetch dQw4w9WgXcQ --format srt
+salin fetch -i ids.txt --format jsonl           # one record per video
+salin download -i ids.txt -l en -l de -w 3 -o subs
+salin clean subs/ --recursive --output-dir transcripts/
+salin doctor --check dQw4w9WgXcQ
+```
+
+`fetch` and `download` take URLs as arguments or from `--input FILE` (one per
+line, `#` comments ignored). Both default to `en`; `-l` is repeatable and also
+accepts comma-separated codes. Every command that contacts YouTube accepts
+`--cookies-from-browser`, `--cookiefile`, and `--proxy`.
+
+`fetch --format` is `text` (default), `json`, `jsonl`, `srt`, or `vtt`. `json`,
+`srt`, and `vtt` need exactly one URL; use `jsonl` for batches. `download -f`
+accepts any of the seven subtitle formats and defaults to `vtt`. Add `--json`
+to `inspect` or `download` for machine-readable output; `jsonl` records always
+carry `ok`, and failures add `error` and `error_class`.
+
+| exit code | meaning |
+| --------: | ------- |
+|         0 | everything requested succeeded |
+|         1 | at least one item failed, or a batch was partial |
+|         2 | invalid arguments |
+|         3 | YouTube rate-limited the request |
+|         4 | no transcript was available for the requested language |
+
 ## Bulk downloads
 
 `download_many()` is an `Iterator[SubtitleResult]` backed by a thread pool.
