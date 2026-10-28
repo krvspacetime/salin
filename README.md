@@ -262,11 +262,11 @@ randomized order, and each speedup is paired against the one-worker run of the
 same block (12 paired measurements per count):
 
 | `max_workers` | median block | median speedup | mean speedup (95% CI) | throughput |
-|---:|---:|---:|---|---:|
-| 1 | 43.7s | 1.0x | — | 16/min |
-| 2 | 29.4s | 1.5x | 1.46x ± 0.25 | 22/min |
-| 3 | 19.5s | 2.3x | 2.11x ± 0.38 | 31/min |
-| 6 | 17.6s | 2.5x | 2.49x ± 0.43 | 37/min |
+| ------------: | -----------: | -------------: | --------------------- | ---------: |
+|             1 |        43.7s |           1.0x | —                     |     16/min |
+|             2 |        29.4s |           1.5x | 1.46x ± 0.25          |     22/min |
+|             3 |        19.5s |           2.3x | 2.11x ± 0.38          |     31/min |
+|             6 |        17.6s |           2.5x | 2.49x ± 0.43          |     37/min |
 
 We tested 1, 2, 3, and 6 workers; 4 and 5 were not measured. Three is the clear
 knee at roughly 2.3x sequential. Six was the fastest count tested, but its
@@ -422,18 +422,18 @@ smaller and faster per video. Salin covers more of the surrounding work: files
 on disk, format conversion, cleaning, bulk runs, and behavior you can reason
 about when YouTube starts refusing requests.
 
-| | youtube-transcript-api | Salin |
-|---|---|---|
-| Snippets in memory | yes | yes (`fetch()`) |
-| Subtitle files on disk | no | yes (7 formats) |
-| Cleaning / dedup | no | yes |
-| Language resolution | basic | manual/auto policies, regional variants |
-| Bulk downloads | no | `download_many()` with workers |
-| Browser cookies | no | yes |
-| Proxy / `cookiefile` | proxy only | `cookies`, `cookiefile`, `proxy` |
-| Rate-limit signal | `IpBlocked` | `RateLimitedError` + status + `Retry-After` |
-| Survives a watch-page block | no | yes (inspection and resolution keep working) |
-| Python | 3.9+ | 3.12+ |
+|                             | youtube-transcript-api | Salin                                        |
+| --------------------------- | ---------------------- | -------------------------------------------- |
+| Snippets in memory          | yes                    | yes (`fetch()`)                              |
+| Subtitle files on disk      | no                     | yes (7 formats)                              |
+| Cleaning / dedup            | no                     | yes                                          |
+| Language resolution         | basic                  | manual/auto policies, regional variants      |
+| Bulk downloads              | no                     | `download_many()` with workers               |
+| Browser cookies             | no                     | yes                                          |
+| Proxy / `cookiefile`        | proxy only             | `cookies`, `cookiefile`, `proxy`             |
+| Rate-limit signal           | `IpBlocked`            | `RateLimitedError` + status + `Retry-After`  |
+| Survives a watch-page block | no                     | yes (inspection and resolution keep working) |
+| Python                      | 3.9+                   | 3.12+                                        |
 
 ## Benchmarks
 
@@ -448,12 +448,12 @@ The sample is 1,000 videos drawn uniformly from a database of 9,776. Only 50 of
 them were marked as having captions, so the sample is not biased toward videos
 known to have subtitle tracks. Every video was attempted:
 
-| outcome | videos | share |
-|---|---:|---:|
-| English transcript returned | 898 | 89.8% |
-| no captions at all | 96 | 9.6% |
-| English only as machine translation | 5 | 0.5% |
-| video unavailable | 1 | 0.1% |
+| outcome                             | videos | share |
+| ----------------------------------- | -----: | ----: |
+| English transcript returned         |    898 | 89.8% |
+| no captions at all                  |     96 |  9.6% |
+| English only as machine translation |      5 |  0.5% |
+| video unavailable                   |      1 |  0.1% |
 
 - **Zero blocks** over 88.1 minutes, an average of 11.4 videos/min.
 - Latency on the 898 successes: mean 5.58s, p50 5.06s, p95 9.66s.
@@ -477,11 +477,11 @@ characters 7,032 vs 7,032, median snippets 116 vs 116, median ratio 1.000, and
 no video off by more than one character. On those 55 videos Salin averaged
 3.86s against 1.22s, because it pays for a full yt-dlp metadata extraction.
 
-| | youtube-transcript-api | Salin |
-|---|---:|---:|
-| Sequential throughput | ~31 videos/min until blocked | 11–15 videos/min |
-| Watch-page API block | after ~100s of requests | not observed in 88 minutes |
-| Behavior after a block | every request fails | `inspect()` and `resolve()` still work; caption fetches return 429 |
+|                        |       youtube-transcript-api |                                                              Salin |
+| ---------------------- | ---------------------------: | -----------------------------------------------------------------: |
+| Sequential throughput  | ~31 videos/min until blocked |                                                   11–15 videos/min |
+| Watch-page API block   |      after ~100s of requests |                                         not observed in 88 minutes |
+| Behavior after a block |          every request fails | `inspect()` and `resolve()` still work; caption fetches return 429 |
 
 `youtube-transcript-api` drives the watch page directly and blocks after roughly
 100 seconds of sequential requests (video #56 and #89 in two runs). Once

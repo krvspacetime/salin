@@ -1,12 +1,31 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Salin">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="100%" height="100%">
   <defs>
-    <linearGradient id="salin-bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#1d4ed8"/>
-      <stop offset="1" stop-color="#3b82f6"/>
+    <linearGradient id="p-poly-warm" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F59E0B"/>
+      <stop offset="100%" stop-color="#D97706"/>
     </linearGradient>
   </defs>
-  <rect width="128" height="128" rx="30" fill="url(#salin-bg)"/>
-  <rect x="36" y="34" width="56" height="14" rx="7" fill="#bfdbfe" opacity="0.7"/>
-  <rect x="30" y="52" width="68" height="16" rx="8" fill="#dbeafe"/>
-  <rect x="36" y="74" width="56" height="14" rx="7" fill="#93c5fd"/>
+  <rect width="200" height="200" rx="44" fill="#0F1117"/>
+  <!-- Ears -->
+  <polygon points="76,82 46,44 68,48" fill="#B45309"/>
+  <polygon points="68,48 76,82 82,70" fill="#D97706"/>
+  <polygon points="124,82 154,44 132,48" fill="#B45309"/>
+  <polygon points="132,48 124,82 118,70" fill="#D97706"/>
+  <!-- Crown / Forehead -->
+  <polygon points="100,64 76,82 100,102" fill="#F59E0B"/>
+  <polygon points="100,64 124,82 100,102" fill="url(#p-poly-warm)"/>
+  <!-- Cheeks -->
+  <polygon points="76,82 62,108 86,118 100,102" fill="#B45309"/>
+  <polygon points="124,82 138,108 114,118 100,102" fill="#D97706"/>
+  <!-- Snout bridge & Nose -->
+  <polygon points="100,102 86,118 100,146" fill="#F59E0B"/>
+  <polygon points="100,102 114,118 100,146" fill="#D97706"/>
+  <polygon points="100,146 94,152 106,152" fill="#18181B"/>
+  <!-- Signature White Throat Chevrons -->
+  <polygon points="100,154 90,166 100,174 110,166" fill="#FFFFFF"/>
+  <!-- Eyes -->
+  <polygon points="76,86 86,96 74,98" fill="#18181B"/>
+  <circle cx="78" cy="92" r="2" fill="#FFFFFF"/>
+  <polygon points="124,86 114,96 126,98" fill="#18181B"/>
+  <circle cx="122" cy="92" r="2" fill="#FFFFFF"/>
 </svg>
