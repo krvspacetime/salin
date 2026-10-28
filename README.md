@@ -14,7 +14,7 @@
   <a href="https://github.com/krvspacetime/salin/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/krvspacetime/salin/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="Lint: ruff" src="https://img.shields.io/badge/lint-ruff-261230.svg">
   <img alt="Types: mypy-style, checked with ty" src="https://img.shields.io/badge/types-ty-ffd43b.svg">
-  <a href="https://pypi.org/project/salin/"><img alt="PyPI" src="https://img.shields.io/badge/pypi-soon-lightgrey.svg"></a>
+  <a href="https://pypi.org/project/salin/"><img alt="PyPI" src="https://img.shields.io/pypi/v/salin.svg"></a>
   <a href="https://github.com/sponsors/krvspacetime"><img alt="Sponsor" src="https://img.shields.io/badge/sponsor-%E2%9D%A4-ff69b4.svg"></a>
 </p>
 
@@ -65,10 +65,14 @@ Salin can be rate-limited too — it just tells you instead of hiding it.
 
 ## Install
 
-The PyPI release is being prepared. Until it is up, install from git:
+```bash
+pip install salin
+```
+
+Or with uv:
 
 ```bash
-uv add git+https://github.com/krvspacetime/salin.git
+uv add salin
 ```
 
 Requires Python 3.12+.
