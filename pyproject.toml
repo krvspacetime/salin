@@ -1,6 +1,6 @@
 [project]
 name = "salin"
-version = "0.1.0"
+version = "0.1.1"
 description = "Typed Python client for YouTube subtitles: inspect, resolve, download, fetch in memory, and clean caption tracks."
 readme = "README.md"
 license = "MIT"
@@ -51,6 +51,16 @@ package = true
 
 [tool.hatch.build.targets.wheel]
 packages = ["salin"]
+
+[tool.hatch.build.targets.sdist]
+# Keep local-only directories (bench/, yt-subs-dev/, ADVICE.md) out of the
+# sdist. Hatchling selects files through git, which honors .git/info/exclude,
+# so an untracked local directory would otherwise be packaged and published.
+include = [
+    "/salin",
+    "/tests",
+    "/assets",
+]
 
 [build-system]
 requires = ["hatchling"]
