@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/logo.svg" width="96" height="96" alt="Salin logo">
+  <img src="https://raw.githubusercontent.com/krvspacetime/salin/main/assets/logo.svg" width="96" height="96" alt="Salin logo">
 </p>
 
 <h1 align="center">Salin</h1>
@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
+  <a href="https://github.com/krvspacetime/salin/blob/main/LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <img alt="Python 3.12 | 3.13" src="https://img.shields.io/badge/python-3.12%20%7C%203.13-blue.svg">
   <a href="https://github.com/krvspacetime/salin/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/krvspacetime/salin/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="Lint: ruff" src="https://img.shields.io/badge/lint-ruff-261230.svg">
@@ -641,4 +641,4 @@ CI runs the same commands on Python 3.12 and 3.13.
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT - see [LICENSE](https://github.com/krvspacetime/salin/blob/main/LICENSE).
