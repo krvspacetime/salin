@@ -1,26 +1,38 @@
 [project]
 name = "salin"
 version = "0.1.0"
-description = "A Python library that makes it easy to download any YouTube subtitle in any available format."
+description = "Typed Python client for YouTube subtitles: inspect, resolve, download, fetch in memory, and clean caption tracks."
 readme = "README.md"
 license = "MIT"
 authors = [{ name = "krvspacetime", email = "krv.becinal@gmail.com" }]
 requires-python = ">=3.12"
-keywords = ["youtube", "subtitles", "captions", "transcripts", "yt-dlp"]
+keywords = [
+    "youtube",
+    "subtitles",
+    "captions",
+    "transcripts",
+    "subtitle-downloader",
+    "transcript-api",
+    "webvtt",
+    "srt",
+    "vtt",
+    "yt-dlp",
+]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Topic :: Multimedia :: Video",
     "Typing :: Typed",
 ]
 dependencies = ["yt-dlp[default]>=2026.3.17"]
 
 [project.urls]
-Homepage = "https://github.com/krvspacetime/yt-subs"
-Repository = "https://github.com/krvspacetime/yt-subs"
-Issues = "https://github.com/krvspacetime/yt-subs/issues"
+Homepage = "https://github.com/krvspacetime/salin"
+Repository = "https://github.com/krvspacetime/salin"
+Issues = "https://github.com/krvspacetime/salin/issues"
 
 [dependency-groups]
 dev = ["pytest>=9.0.3", "ruff>=0.15.15", "ty>=0.0.42"]

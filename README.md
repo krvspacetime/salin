@@ -11,7 +11,7 @@
 <p align="center">
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <img alt="Python 3.12 | 3.13" src="https://img.shields.io/badge/python-3.12%20%7C%203.13-blue.svg">
-  <a href="https://github.com/krvspacetime/yt-subs/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/krvspacetime/yt-subs/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="https://github.com/krvspacetime/salin/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/krvspacetime/salin/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="Lint: ruff" src="https://img.shields.io/badge/lint-ruff-261230.svg">
   <img alt="Types: mypy-style, checked with ty" src="https://img.shields.io/badge/types-ty-ffd43b.svg">
   <a href="https://pypi.org/project/salin/"><img alt="PyPI" src="https://img.shields.io/badge/pypi-soon-lightgrey.svg"></a>
@@ -65,11 +65,13 @@ Salin can be rate-limited too — it just tells you instead of hiding it.
 
 ## Install
 
-Prebuilt packages are coming to PyPI. Until then, install from git:
+The PyPI release is being prepared. Until it is up, install from git:
 
 ```bash
-uv add git+https://github.com/krvspacetime/yt-subs.git
+uv add git+https://github.com/krvspacetime/salin.git
 ```
+
+Requires Python 3.12+.
 
 ## Quick start
 
