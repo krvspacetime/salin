@@ -169,6 +169,13 @@ def test_unknown_command_is_usage_error():
     assert exc.value.code == 2
 
 
+def test_help_points_to_the_cli_guide(capsys):
+    with pytest.raises(SystemExit) as exc:
+        run("--help")
+    assert exc.value.code == 0
+    assert "CLI.md" in capsys.readouterr().out
+
+
 def test_python_dash_m_runs_the_same_entry_point():
     import subprocess
     import sys
@@ -571,6 +578,29 @@ def test_doctor_smoke_test_ok(fake, capsys):
     fake.fetch_map[URL] = transcript()
     assert run("doctor", "--check", URL) == cli.EXIT_OK
     assert "smoke test ok: 2 snippets (en" in capsys.readouterr().out
+
+
+def test_doctor_check_accepts_language_options(fake, capsys):
+    fake.fetch_map[URL] = transcript(language_code="de", language="Deutsch")
+    assert (
+        run(
+            "doctor",
+            "--check",
+            URL,
+            "-l",
+            "de",
+            "--match",
+            "exact",
+            "--source",
+            "manual_only",
+        )
+        == cli.EXIT_OK
+    )
+    assert fake.kwargs is not None
+    assert fake.kwargs["languages"] == ["de"]
+    assert fake.kwargs["language_match"] == "exact"
+    assert fake.kwargs["source_policy"] == "manual_only"
+    assert "(de, generated=False)" in capsys.readouterr().out
 
 
 def test_doctor_smoke_test_exit_codes(fake, capsys):

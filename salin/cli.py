@@ -67,6 +67,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="salin",
         description="Inspect, fetch, download, and clean YouTube subtitle tracks.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=(
+            "Full guide: https://github.com/krvspacetime/salin/blob/main/CLI.md\n"
+            "Run 'salin COMMAND --help' for command options."
+        ),
     )
     parser.add_argument("--version", action="version", version=f"salin {__version__}")
     subparsers = parser.add_subparsers(dest="command", required=True, metavar="COMMAND")
@@ -142,7 +147,12 @@ def build_parser() -> argparse.ArgumentParser:
         "-o", "--output-dir", type=Path, metavar="DIR", help="destination directory"
     )
     download.add_argument(
-        "-w", "--workers", type=int, default=1, metavar="N", help="parallel downloads"
+        "-w",
+        "--workers",
+        type=int,
+        default=1,
+        metavar="N",
+        help="parallel downloads (default: 1)",
     )
     download.add_argument(
         "--json", action="store_true", help="print one JSON object per video"
@@ -165,7 +175,9 @@ def build_parser() -> argparse.ArgumentParser:
     clean.set_defaults(func=cmd_clean)
 
     doctor = subparsers.add_parser(
-        "doctor", parents=[net], help="show versions and optionally run a smoke test"
+        "doctor",
+        parents=[request],
+        help="show versions and optionally run a smoke test",
     )
     doctor.add_argument(
         "--check", metavar="URL", help="fetch one URL to test the whole pipeline"

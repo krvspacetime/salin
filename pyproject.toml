@@ -63,6 +63,7 @@ include = [
     "/salin",
     "/tests",
     "/assets",
+    "/CLI.md",
 ]
 
 [build-system]
